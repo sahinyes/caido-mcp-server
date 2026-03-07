@@ -14,6 +14,11 @@ MCP server for [Caido](https://caido.io/) proxy. Lets AI assistants browse, repl
 - **Findings** - Create and list security findings
 - **Sitemap** - Browse discovered endpoints
 - **Scopes** - Manage target definitions
+- **Projects** - List and switch between projects
+- **Workflows** - List automation workflows
+- **Instance** - Get Caido version and platform info
+- **Intercept** - Check status and pause/resume intercept
+- **Filters** - List saved HTTPQL filter presets
 - **Token auto-refresh** - Expired tokens refresh automatically mid-session
 - **Session reuse** - Single replay session per server lifetime, no sprawl
 - **Body limits** - Response bodies capped at 2KB by default to save context
@@ -86,6 +91,13 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 | `caido_get_sitemap` | Browse sitemap hierarchy |
 | `caido_list_scopes` | List target scopes |
 | `caido_create_scope` | Create new scope |
+| `caido_list_projects` | List projects, marks current |
+| `caido_select_project` | Switch active project |
+| `caido_list_workflows` | List automation workflows |
+| `caido_get_instance` | Get Caido version and platform |
+| `caido_intercept_status` | Get intercept status (PAUSED/RUNNING) |
+| `caido_intercept_control` | Pause or resume intercept |
+| `caido_list_filters` | List saved HTTPQL filter presets |
 
 <details>
 <summary>Parameter reference</summary>
@@ -139,8 +151,18 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string | Scope name (required) |
-| `allowlist` | string[] | URL patterns to include (required) |
-| `denylist` | string[] | URL patterns to exclude |
+| `allowlist` | string[] | Hostnames to include, e.g. `example.com`, `*.example.com` (required) |
+| `denylist` | string[] | Hostnames to exclude |
+
+### caido_select_project
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Project ID to switch to (required) |
+
+### caido_intercept_control
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | string | `pause` or `resume` (required) |
 
 </details>
 

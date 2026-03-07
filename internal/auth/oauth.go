@@ -66,11 +66,15 @@ func (a *Authenticator) EnsureAuthenticated(
 	return a.startAuthFlow(ctx)
 }
 
-// refreshToken attempts to refresh the access token
-func (a *Authenticator) refreshToken(
-	ctx context.Context, refreshToken string,
+// RefreshAndSave calls the Caido API to refresh an access token
+// and persists the result to the token store.
+func RefreshAndSave(
+	ctx context.Context,
+	client *caido.Client,
+	tokenStore *TokenStore,
+	refreshToken string,
 ) (*StoredToken, error) {
-	resp, err := a.client.Auth.RefreshAuthenticationToken(
+	resp, err := client.Auth.RefreshAuthenticationToken(
 		ctx, refreshToken,
 	)
 	if err != nil {
@@ -79,7 +83,7 @@ func (a *Authenticator) refreshToken(
 
 	payload := resp.RefreshAuthenticationToken
 	if payload.Error != nil || payload.Token == nil {
-		return nil, fmt.Errorf("token refresh returned error")
+		return nil, fmt.Errorf("token refresh failed")
 	}
 
 	token := payload.Token
@@ -94,13 +98,22 @@ func (a *Authenticator) refreshToken(
 		ExpiresAt:    ParseExpiresAt(token.ExpiresAt),
 	}
 
-	if err := a.tokenStore.Save(stored); err != nil {
+	if err := tokenStore.Save(stored); err != nil {
 		return nil, fmt.Errorf(
 			"failed to save refreshed token: %w", err,
 		)
 	}
 
 	return stored, nil
+}
+
+// refreshToken attempts to refresh the access token
+func (a *Authenticator) refreshToken(
+	ctx context.Context, refreshToken string,
+) (*StoredToken, error) {
+	return RefreshAndSave(
+		ctx, a.client, a.tokenStore, refreshToken,
+	)
 }
 
 // startAuthFlow initiates the OAuth authentication flow

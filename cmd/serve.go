@@ -136,32 +136,13 @@ func makeTokenRefresher(
 			)
 		}
 
-		resp, err := client.Auth.RefreshAuthenticationToken(
-			ctx, stored.RefreshToken,
+		refreshed, err := auth.RefreshAndSave(
+			ctx, client, tokenStore, stored.RefreshToken,
 		)
 		if err != nil {
 			return "", err
 		}
-
-		payload := resp.RefreshAuthenticationToken
-		if payload.Error != nil || payload.Token == nil {
-			return "", fmt.Errorf("token refresh failed")
-		}
-
-		token := payload.Token
-		refreshTok := ""
-		if token.RefreshToken != nil {
-			refreshTok = *token.RefreshToken
-		}
-
-		_ = tokenStore.Save(&auth.StoredToken{
-			AccessToken:  token.AccessToken,
-			RefreshToken: refreshTok,
-			ExpiresAt: auth.ParseExpiresAt(
-				token.ExpiresAt,
-			),
-		})
-		return token.AccessToken, nil
+		return refreshed.AccessToken, nil
 	}
 }
 
@@ -200,8 +181,8 @@ func getTokenAndStore(
 			)
 		}
 
-		resp, err := client.Auth.RefreshAuthenticationToken(
-			ctx, storedToken.RefreshToken,
+		refreshed, err := auth.RefreshAndSave(
+			ctx, client, tokenStore, storedToken.RefreshToken,
 		)
 		if err != nil {
 			return "", nil, fmt.Errorf(
@@ -210,35 +191,7 @@ func getTokenAndStore(
 				err,
 			)
 		}
-
-		payload := resp.RefreshAuthenticationToken
-		if payload.Error != nil || payload.Token == nil {
-			return "", nil, fmt.Errorf(
-				"token refresh returned error. " +
-					"Please run 'caido-mcp-server login' again",
-			)
-		}
-
-		token := payload.Token
-		refreshTok := ""
-		if token.RefreshToken != nil {
-			refreshTok = *token.RefreshToken
-		}
-
-		storedToken = &auth.StoredToken{
-			AccessToken:  token.AccessToken,
-			RefreshToken: refreshTok,
-			ExpiresAt: auth.ParseExpiresAt(
-				token.ExpiresAt,
-			),
-		}
-		if err := tokenStore.Save(storedToken); err != nil {
-			fmt.Fprintf(
-				os.Stderr,
-				"Warning: failed to save refreshed token: %v\n",
-				err,
-			)
-		}
+		storedToken = refreshed
 	}
 
 	return storedToken.AccessToken, tokenStore, nil

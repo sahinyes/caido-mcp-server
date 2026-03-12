@@ -1,5 +1,7 @@
 # Binaries
 caido-mcp-server
+Caido-CLI/caido
+dist/
 *.exe
 
 # IDE

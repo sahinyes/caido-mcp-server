@@ -166,6 +166,78 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 
 </details>
 
+## Caido CLI
+
+Standalone command-line client for Caido proxy. No MCP required -- use it directly from your terminal.
+
+### Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/c0tton-fluff/caido-mcp-server/main/install.sh | TOOL=cli bash
+```
+
+Or download from [Releases](https://github.com/c0tton-fluff/caido-mcp-server/releases).
+
+<details>
+<summary>Build from source</summary>
+
+```bash
+cd Caido-CLI
+go build -o caido-cli .
+mv caido-cli /usr/local/bin/
+```
+</details>
+
+### Usage
+
+Requires the same auth token as the MCP server (`caido-mcp-server login`).
+
+```bash
+# Check connection and auth
+caido status -u http://localhost:8080
+
+# Send a structured request
+caido send GET https://target.com/api/users
+caido send POST https://target.com/api/login -j '{"user":"admin","pass":"test"}'
+caido send PUT https://target.com/api/profile -H "Authorization: Bearer tok" -j '{"role":"admin"}'
+
+# Send a raw HTTP request
+caido raw 'GET /api/users HTTP/1.1\r\nHost: target.com\r\n\r\n'
+caido raw -f request.txt --host target.com --port 8443
+echo -n 'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n' | caido raw -
+
+# Browse proxy history
+caido history
+caido history -f 'req.host.eq:"target.com"' -n 20
+
+# Get full request/response details
+caido request 12345
+
+# Encode/decode
+caido encode base64 "hello world"
+caido decode url "%3Cscript%3E"
+caido encode hex "test"
+```
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `status` | Check Caido instance health and auth token |
+| `send METHOD URL` | Send structured HTTP request via Replay API |
+| `raw` | Send raw HTTP request (arg, file, or stdin) |
+| `history` | List proxy history with HTTPQL filtering |
+| `request ID` | Get full request/response by ID |
+| `encode TYPE VALUE` | Encode value (url, base64, hex) |
+| `decode TYPE VALUE` | Decode value (url, base64, hex) |
+
+### Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `-u, --url` | Caido instance URL (or set `CAIDO_URL`) |
+| `-b, --body-limit` | Response body byte limit (default 2000) |
+
 ## Troubleshooting
 
 | Error | Fix |

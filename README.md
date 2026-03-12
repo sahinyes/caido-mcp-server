@@ -4,7 +4,10 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/c0tton-fluff/caido-mcp-server)](https://github.com/c0tton-fluff/caido-mcp-server/releases)
 
-MCP server for [Caido](https://caido.io/) proxy. Lets AI assistants browse, replay, and analyze HTTP traffic.
+Tools for [Caido](https://caido.io/) proxy. Two ways to use it:
+
+- **MCP Server** -- lets AI assistants browse, replay, and analyze HTTP traffic
+- **CLI** -- standalone terminal client, no MCP required
 
 ## Features
 
@@ -23,7 +26,12 @@ MCP server for [Caido](https://caido.io/) proxy. Lets AI assistants browse, repl
 - **Session reuse** - Single replay session per server lifetime, no sprawl
 - **Body limits** - Response bodies capped at 2KB by default to save context
 
-## Install
+---
+
+<details open>
+<summary><h2>MCP Server</h2></summary>
+
+### Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/c0tton-fluff/caido-mcp-server/main/install.sh | bash
@@ -41,7 +49,7 @@ go build -o caido-mcp-server .
 ```
 </details>
 
-## Quick Start
+### Quick Start
 
 **1. Authenticate**
 
@@ -74,7 +82,7 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 "Show fuzzing results from Automate session 1"
 ```
 
-## Tools
+### Tools
 
 | Tool | Description |
 |------|-------------|
@@ -102,14 +110,14 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 <details>
 <summary>Parameter reference</summary>
 
-### caido_list_requests
+#### caido_list_requests
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `httpql` | string | HTTPQL filter query |
 | `limit` | int | Max requests (default 20, max 100) |
 | `after` | string | Pagination cursor |
 
-### caido_get_request
+#### caido_get_request
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `ids` | string[] | Request IDs (required) |
@@ -117,7 +125,7 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 | `bodyOffset` | int | Byte offset |
 | `bodyLimit` | int | Byte limit (default 2000) |
 
-### caido_send_request
+#### caido_send_request
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `raw` | string | Full HTTP request (required) |
@@ -126,47 +134,52 @@ CAIDO_URL=http://localhost:8080 caido-mcp-server login
 | `tls` | bool | Use HTTPS (default true) |
 | `sessionId` | string | Replay session (auto-managed if omitted) |
 
-### caido_get_replay_entry
+#### caido_get_replay_entry
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | string | Replay entry ID (required) |
 | `bodyOffset` | int | Byte offset |
 | `bodyLimit` | int | Byte limit (default 2000) |
 
-### caido_get_automate_entry
+#### caido_get_automate_entry
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | string | Entry ID (required) |
 | `limit` | int | Max results |
 | `after` | string | Pagination cursor |
 
-### caido_create_finding
+#### caido_create_finding
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `requestId` | string | Associated request (required) |
 | `title` | string | Finding title (required) |
 | `description` | string | Finding description |
 
-### caido_create_scope
+#### caido_create_scope
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string | Scope name (required) |
 | `allowlist` | string[] | Hostnames to include, e.g. `example.com`, `*.example.com` (required) |
 | `denylist` | string[] | Hostnames to exclude |
 
-### caido_select_project
+#### caido_select_project
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | string | Project ID to switch to (required) |
 
-### caido_intercept_control
+#### caido_intercept_control
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `action` | string | `pause` or `resume` (required) |
 
 </details>
 
-## Caido CLI
+</details>
+
+---
+
+<details>
+<summary><h2>CLI</h2></summary>
 
 Standalone command-line client for Caido proxy. No MCP required -- use it directly from your terminal.
 
@@ -219,7 +232,7 @@ caido decode url "%3Cscript%3E"
 caido encode hex "test"
 ```
 
-### CLI Commands
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -237,6 +250,10 @@ caido encode hex "test"
 |------|-------------|
 | `-u, --url` | Caido instance URL (or set `CAIDO_URL`) |
 | `-b, --body-limit` | Response body byte limit (default 2000) |
+
+</details>
+
+---
 
 ## Troubleshooting
 

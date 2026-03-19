@@ -6,6 +6,7 @@ import (
 	"time"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -29,8 +30,8 @@ type GetRequestOutput struct {
 	StatusCode  int                `json:"statusCode,omitempty"`
 	RoundtripMs int                `json:"roundtripMs,omitempty"`
 	CreatedAt   string             `json:"createdAt,omitempty"`
-	Request     *ParsedHTTPMessage `json:"request,omitempty"`
-	Response    *ParsedHTTPMessage `json:"response,omitempty"`
+	Request     *httputil.ParsedMessage `json:"request,omitempty"`
+	Response    *httputil.ParsedMessage `json:"response,omitempty"`
 	Error       string             `json:"error,omitempty"`
 }
 
@@ -76,7 +77,7 @@ func getRequestHandler(
 		include := input.Include
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
-			bodyLimit = 2000
+			bodyLimit = httputil.DefaultBodyLimit
 		}
 
 		var results []GetRequestOutput
@@ -186,7 +187,7 @@ func processFullRequest(
 	inclReqH := shouldInclude(include, "requestHeaders")
 	inclReqB := shouldInclude(include, "requestBody")
 	if inclReqH || inclReqB {
-		output.Request = parseHTTPMessage(
+		output.Request = httputil.ParseBase64(
 			r.Raw, inclReqH, inclReqB, bodyOffset, bodyLimit,
 		)
 	}
@@ -195,7 +196,7 @@ func processFullRequest(
 		inclRespH := shouldInclude(include, "responseHeaders")
 		inclRespB := shouldInclude(include, "responseBody")
 		if inclRespH || inclRespB {
-			output.Response = parseHTTPMessage(
+			output.Response = httputil.ParseBase64(
 				r.Response.Raw, inclRespH, inclRespB,
 				bodyOffset, bodyLimit,
 			)

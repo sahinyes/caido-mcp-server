@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -74,7 +75,7 @@ func listRequestsHandler(
 			summary := RequestSummary{
 				ID:     r.Id,
 				Method: r.Method,
-				URL: buildURL(
+				URL: httputil.BuildURL(
 					r.IsTls, r.Host, r.Port, r.Path, r.Query,
 				),
 			}
@@ -93,30 +94,6 @@ func listRequestsHandler(
 
 		return nil, output, nil
 	}
-}
-
-// buildURL constructs the full URL from request parts
-func buildURL(
-	isTLS bool, host string, port int, path, query string,
-) string {
-	scheme := "http"
-	if isTLS {
-		scheme = "https"
-	}
-
-	url := fmt.Sprintf("%s://%s", scheme, host)
-
-	if (isTLS && port != 443) || (!isTLS && port != 80) {
-		url = fmt.Sprintf("%s:%d", url, port)
-	}
-
-	url += path
-
-	if query != "" {
-		url += "?" + query
-	}
-
-	return url
 }
 
 // RegisterListRequestsTool registers the tool with the MCP server

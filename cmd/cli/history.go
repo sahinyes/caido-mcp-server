@@ -6,6 +6,7 @@ import (
 	"time"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +74,11 @@ func runHistory(cmd *cobra.Command, args []string) error {
 
 	for _, edge := range conn.Edges {
 		r := edge.Node
-		url := buildURL(r.IsTls, r.Host, r.Port, r.Path, r.Query)
+		url := httputil.BuildURL(r.IsTls, r.Host, r.Port, r.Path, r.Query)
+		// Truncate long URLs for table display
+		if len(url) > 100 {
+			url = url[:97] + "..."
+		}
 		status := "-"
 		if r.Response != nil {
 			status = fmt.Sprintf("%d", r.Response.StatusCode)
@@ -92,25 +97,4 @@ func runHistory(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildURL(
-	isTLS bool, host string, port int, path, query string,
-) string {
-	scheme := "http"
-	if isTLS {
-		scheme = "https"
-	}
-	u := fmt.Sprintf("%s://%s", scheme, host)
-	if (isTLS && port != 443) || (!isTLS && port != 80) {
-		u = fmt.Sprintf("%s:%d", u, port)
-	}
-	u += path
-	if query != "" {
-		u += "?" + query
-	}
-	// Truncate long URLs for table display
-	if len(u) > 100 {
-		u = u[:97] + "..."
-	}
-	return u
-}
 

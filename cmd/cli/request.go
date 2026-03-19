@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +47,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	}
 
 	// Print request
-	reqParsed := parseRawBase64(r.Raw, true, true, 0, bodyLimit)
+	reqParsed := httputil.ParseBase64(r.Raw, true, true, 0, bodyLimit)
 	fmt.Println(fmtReq(reqParsed))
 
 	// Separator
@@ -54,7 +55,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 
 	// Print response
 	if r.Response != nil {
-		respParsed := parseRawBase64(
+		respParsed := httputil.ParseBase64(
 			r.Response.Raw, true, true, 0, bodyLimit,
 		)
 		fmt.Println(fmtResp(respParsed, false))

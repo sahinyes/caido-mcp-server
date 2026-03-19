@@ -5,16 +5,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
-	"sync"
-	"time"
 
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
-)
-
-var (
-	defaultSessionID string
-	sessionMu        sync.Mutex
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 )
 
 // sendReplay sends a CRLF-normalized raw HTTP request via the Replay API
@@ -26,7 +21,7 @@ func sendReplay(
 	port int, useTLS bool,
 	bodyLimit int, allHeaders bool,
 ) (string, error) {
-	sessionID, err := getOrCreateSession(ctx, client, "")
+	sessionID, err := replay.GetOrCreateSession(ctx, client, "")
 	if err != nil {
 		return "", err
 	}
@@ -78,9 +73,7 @@ func sendReplay(
 				)
 			}
 			sessionID = newResp.CreateReplaySession.Session.Id
-			sessionMu.Lock()
-			defaultSessionID = sessionID
-			sessionMu.Unlock()
+			replay.ResetDefaultSession(sessionID)
 			prevEntryID = ""
 			_, err = client.Replay.SendRequest(
 				ctx, sessionID, taskInput,
@@ -93,7 +86,7 @@ func sendReplay(
 		}
 	}
 
-	entry, err := pollForEntry(ctx, client, sessionID, prevEntryID)
+	entry, err := replay.PollForEntry(ctx, client, sessionID, prevEntryID)
 	if err != nil {
 		return "", err
 	}
@@ -102,96 +95,9 @@ func sendReplay(
 		return "", fmt.Errorf("no response received")
 	}
 
-	resp := parseRawBase64(
+	resp := httputil.ParseBase64(
 		entry.Request.Response.Raw, true, true, 0, bodyLimit,
 	)
 	return fmtResp(resp, allHeaders) + "\n", nil
 }
 
-func getOrCreateSession(
-	ctx context.Context,
-	client *caido.Client,
-	inputID string,
-) (string, error) {
-	if inputID != "" {
-		return inputID, nil
-	}
-	sessionMu.Lock()
-	defer sessionMu.Unlock()
-	if defaultSessionID != "" {
-		return defaultSessionID, nil
-	}
-	resp, err := client.Replay.CreateSession(
-		ctx, &gen.CreateReplaySessionInput{},
-	)
-	if err != nil {
-		return "", fmt.Errorf("create session: %w", err)
-	}
-	defaultSessionID = resp.CreateReplaySession.Session.Id
-	return defaultSessionID, nil
-}
-
-func pollForEntry(
-	ctx context.Context,
-	client *caido.Client,
-	sessionID, prevEntryID string,
-) (*gen.GetReplayEntryReplayEntry, error) {
-	for i := 0; i < 20; i++ {
-		sessResp, err := client.Replay.GetSession(ctx, sessionID)
-		if err != nil {
-			return nil, fmt.Errorf("poll: %w", err)
-		}
-		sess := sessResp.ReplaySession
-		if sess == nil || sess.ActiveEntry == nil {
-			goto wait
-		}
-		if sess.ActiveEntry.Id == prevEntryID {
-			goto wait
-		}
-		{
-			entryResp, err := client.Replay.GetEntry(
-				ctx, sess.ActiveEntry.Id,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("poll entry: %w", err)
-			}
-			e := entryResp.ReplayEntry
-			if e != nil && e.Request != nil &&
-				e.Request.Response != nil {
-				return e, nil
-			}
-		}
-	wait:
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(500 * time.Millisecond):
-		}
-	}
-	return nil, fmt.Errorf("timed out waiting for response (10s)")
-}
-
-// normalizeCRLF handles literal \r\n escapes and ensures proper line endings.
-func normalizeCRLF(raw string) string {
-	raw = strings.ReplaceAll(raw, `\r\n`, "\r\n")
-	raw = strings.ReplaceAll(raw, "\r\n", "\n")
-	raw = strings.ReplaceAll(raw, "\n", "\r\n")
-	if !strings.HasSuffix(raw, "\r\n\r\n") {
-		if strings.HasSuffix(raw, "\r\n") {
-			raw += "\r\n"
-		} else {
-			raw += "\r\n\r\n"
-		}
-	}
-	return raw
-}
-
-func parseHostHeader(raw string) string {
-	for _, line := range strings.Split(raw, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(strings.ToLower(line), "host:") {
-			return strings.TrimSpace(line[5:])
-		}
-	}
-	return ""
-}

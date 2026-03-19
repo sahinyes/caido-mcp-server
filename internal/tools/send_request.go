@@ -7,17 +7,12 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-)
-
-var (
-	defaultSessionID string
-	sessionMu        sync.Mutex
 )
 
 // SendRequestInput is the input for the send_request tool
@@ -33,106 +28,14 @@ type SendRequestInput struct {
 
 // SendRequestOutput is the output of the send_request tool
 type SendRequestOutput struct {
-	RequestID   string             `json:"requestId,omitempty"`
-	EntryID     string             `json:"entryId,omitempty"`
-	SessionID   string             `json:"sessionId"`
-	StatusCode  int                `json:"statusCode,omitempty"`
-	RoundtripMs int                `json:"roundtripMs,omitempty"`
-	Request     *ParsedHTTPMessage `json:"request,omitempty"`
-	Response    *ParsedHTTPMessage `json:"response,omitempty"`
-	Error       string             `json:"error,omitempty"`
-}
-
-const (
-	pollInterval   = 500 * time.Millisecond
-	pollMaxRetries = 20
-	defaultBodyLim = 2000
-)
-
-func pollForResponse(
-	ctx context.Context,
-	client *caido.Client,
-	sessionID string,
-	previousEntryID string,
-) (*gen.GetReplayEntryReplayEntry, error) {
-	for i := 0; i < pollMaxRetries; i++ {
-		sessResp, err := client.Replay.GetSession(ctx, sessionID)
-		if err != nil {
-			return nil, fmt.Errorf("polling failed: %w", err)
-		}
-
-		session := sessResp.ReplaySession
-		if session == nil || session.ActiveEntry == nil {
-			continue
-		}
-
-		if session.ActiveEntry.Id == previousEntryID {
-			continue
-		}
-
-		entryResp, err := client.Replay.GetEntry(
-			ctx, session.ActiveEntry.Id,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("polling failed: %w", err)
-		}
-
-		entry := entryResp.ReplayEntry
-		if entry != nil &&
-			entry.Request != nil &&
-			entry.Request.Response != nil {
-			return entry, nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(pollInterval):
-		}
-	}
-	return nil, fmt.Errorf(
-		"timed out after %ds waiting for response",
-		pollMaxRetries/2,
-	)
-}
-
-func parseHostFromRequest(raw string) string {
-	lines := strings.Split(raw, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(strings.ToLower(line), "host:") {
-			return strings.TrimSpace(line[5:])
-		}
-	}
-	return ""
-}
-
-func createOrReuseSession(
-	ctx context.Context,
-	client *caido.Client,
-	inputSessionID string,
-) (string, error) {
-	if inputSessionID != "" {
-		return inputSessionID, nil
-	}
-
-	sessionMu.Lock()
-	defer sessionMu.Unlock()
-
-	if defaultSessionID != "" {
-		return defaultSessionID, nil
-	}
-
-	resp, err := client.Replay.CreateSession(
-		ctx, &gen.CreateReplaySessionInput{},
-	)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to create replay session: %w", err,
-		)
-	}
-	defaultSessionID = resp.CreateReplaySession.Session.Id
-	return defaultSessionID, nil
+	RequestID   string                `json:"requestId,omitempty"`
+	EntryID     string                `json:"entryId,omitempty"`
+	SessionID   string                `json:"sessionId"`
+	StatusCode  int                   `json:"statusCode,omitempty"`
+	RoundtripMs int                   `json:"roundtripMs,omitempty"`
+	Request     *httputil.ParsedMessage `json:"request,omitempty"`
+	Response    *httputil.ParsedMessage `json:"response,omitempty"`
+	Error       string                `json:"error,omitempty"`
 }
 
 // sendRequestHandler creates the handler function
@@ -150,23 +53,12 @@ func sendRequestHandler(
 			)
 		}
 
-		// Normalize line endings
-		// Handle literal \r\n escape sequences that LLMs commonly produce
-		raw := strings.ReplaceAll(input.Raw, `\r\n`, "\n")
-		raw = strings.ReplaceAll(raw, "\r\n", "\n")
-		raw = strings.ReplaceAll(raw, "\n", "\r\n")
-		if !strings.HasSuffix(raw, "\r\n\r\n") {
-			if strings.HasSuffix(raw, "\r\n") {
-				raw += "\r\n"
-			} else {
-				raw += "\r\n\r\n"
-			}
-		}
+		raw := httputil.NormalizeCRLF(input.Raw)
 
 		// Determine host
 		host := input.Host
 		if host == "" {
-			host = parseHostFromRequest(input.Raw)
+			host = httputil.ParseHostHeader(input.Raw)
 		}
 		if host == "" {
 			return nil, SendRequestOutput{}, fmt.Errorf(
@@ -198,7 +90,7 @@ func sendRequestHandler(
 			}
 		}
 
-		sessionID, err := createOrReuseSession(
+		sessionID, err := replay.GetOrCreateSession(
 			ctx, client, input.SessionID,
 		)
 		if err != nil {
@@ -234,14 +126,12 @@ func sendRequestHandler(
 		)
 		if err != nil || (taskResp.StartReplayTask != nil &&
 			taskResp.StartReplayTask.Error != nil) {
-			// Check for TaskInProgressUserError
 			isTaskInProgress := false
 			if err != nil {
 				isTaskInProgress = strings.Contains(
 					err.Error(), "TaskInProgressUserError",
 				)
 			} else if taskResp.StartReplayTask.Error != nil {
-				// Check the union type
 				isTaskInProgress = true
 			}
 
@@ -258,9 +148,7 @@ func sendRequestHandler(
 				sessionID = newResp.CreateReplaySession.Session.Id
 
 				if input.SessionID == "" {
-					sessionMu.Lock()
-					defaultSessionID = sessionID
-					sessionMu.Unlock()
+					replay.ResetDefaultSession(sessionID)
 				}
 
 				previousEntryID = ""
@@ -281,7 +169,7 @@ func sendRequestHandler(
 
 		output := SendRequestOutput{SessionID: sessionID}
 
-		entry, pollErr := pollForResponse(
+		entry, pollErr := replay.PollForEntry(
 			ctx, client, sessionID, previousEntryID,
 		)
 		if pollErr != nil {
@@ -301,19 +189,19 @@ func sendRequestHandler(
 
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
-			bodyLimit = defaultBodyLim
+			bodyLimit = httputil.DefaultBodyLimit
 		}
 
 		if entry.Request != nil {
 			output.RequestID = entry.Request.Id
-			output.Request = parseHTTPMessage(
+			output.Request = httputil.ParseBase64(
 				entry.Request.Raw, true, false, 0, 0,
 			)
 			if entry.Request.Response != nil {
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
 				output.RoundtripMs = resp.RoundtripTime
-				output.Response = parseHTTPMessage(
+				output.Response = httputil.ParseBase64(
 					resp.Raw, true, true,
 					input.BodyOffset, bodyLimit,
 				)

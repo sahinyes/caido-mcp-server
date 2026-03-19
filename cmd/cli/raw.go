@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/spf13/cobra"
 )
 
@@ -64,11 +65,11 @@ func runRaw(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("empty request")
 	}
 
-	raw = normalizeCRLF(raw)
+	raw = httputil.NormalizeCRLF(raw)
 
 	host, _ := cmd.Flags().GetString("host")
 	if host == "" {
-		host = parseHostHeader(raw)
+		host = httputil.ParseHostHeader(raw)
 	}
 	if host == "" {
 		return fmt.Errorf(

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -134,7 +135,7 @@ func getAutomateEntryHandler(
 				if r.Request != nil {
 					result.RequestID = r.Request.Id
 					result.Method = r.Request.Method
-					result.URL = buildURL(
+					result.URL = httputil.BuildURL(
 						r.Request.IsTls, r.Request.Host,
 						r.Request.Port, r.Request.Path,
 						r.Request.Query,

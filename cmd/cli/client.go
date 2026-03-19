@@ -2,41 +2,33 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/auth"
 	"github.com/spf13/cobra"
 )
 
-type storedToken struct {
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
-	ExpiresAt    time.Time `json:"expiresAt"`
-}
-
-func loadToken() (*storedToken, error) {
-	home, err := os.UserHomeDir()
+func loadToken() (*auth.StoredToken, error) {
+	store, err := auth.NewTokenStore()
 	if err != nil {
-		return nil, fmt.Errorf("home dir: %w", err)
+		return nil, err
 	}
-	data, err := os.ReadFile(
-		filepath.Join(home, ".caido-mcp", "token.json"),
-	)
+	token, err := store.Load()
 	if err != nil {
 		return nil, fmt.Errorf(
-			"no token found -- run 'caido-mcp-server login' first: %w",
+			"no token found - run 'caido-mcp-server login' first: %w",
 			err,
 		)
 	}
-	var t storedToken
-	if err := json.Unmarshal(data, &t); err != nil {
-		return nil, fmt.Errorf("bad token file: %w", err)
+	if token == nil {
+		return nil, fmt.Errorf(
+			"no token found - run 'caido-mcp-server login' first",
+		)
 	}
-	return &t, nil
+	return token, nil
 }
 
 func getCaidoURL(cmd *cobra.Command) (string, error) {
@@ -68,8 +60,13 @@ func newClient(cmd *cobra.Command) (*caido.Client, error) {
 	}
 	client.SetAccessToken(tok.AccessToken)
 
+	tokenStore, err := auth.NewTokenStore()
+	if err != nil {
+		return nil, fmt.Errorf("token store: %w", err)
+	}
+
 	client.SetTokenRefresher(func(ctx context.Context) (string, error) {
-		t, err := loadToken()
+		t, err := tokenStore.Load()
 		if err != nil || t == nil {
 			return "", nil
 		}
@@ -79,37 +76,12 @@ func newClient(cmd *cobra.Command) (*caido.Client, error) {
 		if t.RefreshToken == "" {
 			return "", fmt.Errorf("token expired, no refresh token")
 		}
-		resp, err := client.Auth.RefreshAuthenticationToken(
-			ctx, t.RefreshToken,
+		stored, err := auth.RefreshAndSave(
+			ctx, client, tokenStore, t.RefreshToken,
 		)
 		if err != nil {
 			return "", err
 		}
-		payload := resp.RefreshAuthenticationToken
-		if payload.Error != nil || payload.Token == nil {
-			return "", fmt.Errorf("token refresh failed")
-		}
-		refreshTok := ""
-		if payload.Token.RefreshToken != nil {
-			refreshTok = *payload.Token.RefreshToken
-		}
-		expiresAt, parseErr := time.Parse(
-			time.RFC3339, payload.Token.ExpiresAt,
-		)
-		if parseErr != nil {
-			expiresAt = time.Now().Add(7 * 24 * time.Hour)
-		}
-		stored := &storedToken{
-			AccessToken:  payload.Token.AccessToken,
-			RefreshToken: refreshTok,
-			ExpiresAt:    expiresAt,
-		}
-		data, _ := json.MarshalIndent(stored, "", "  ")
-		home, _ := os.UserHomeDir()
-		_ = os.WriteFile(
-			filepath.Join(home, ".caido-mcp", "token.json"),
-			data, 0600,
-		)
 		return stored.AccessToken, nil
 	})
 

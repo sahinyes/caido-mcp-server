@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	caido "github.com/caido-community/sdk-go"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -20,7 +21,7 @@ type GetReplayEntryInput struct {
 type GetReplayEntryOutput struct {
 	ID          string             `json:"id"`
 	Request     string             `json:"request"`
-	Response    *ParsedHTTPMessage `json:"response,omitempty"`
+	Response    *httputil.ParsedMessage `json:"response,omitempty"`
 	Host        string             `json:"host,omitempty"`
 	Port        int                `json:"port,omitempty"`
 	IsTLS       bool               `json:"isTls,omitempty"`
@@ -57,7 +58,7 @@ func getReplayEntryHandler(
 
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
-			bodyLimit = 2000
+			bodyLimit = httputil.DefaultBodyLimit
 		}
 
 		output := GetReplayEntryOutput{ID: entry.Id}
@@ -81,7 +82,7 @@ func getReplayEntryHandler(
 			r := entry.Request.Response
 			output.StatusCode = r.StatusCode
 			output.RoundtripMs = r.RoundtripTime
-			output.Response = parseHTTPMessage(
+			output.Response = httputil.ParseBase64(
 				r.Raw, true, true,
 				input.BodyOffset, bodyLimit,
 			)

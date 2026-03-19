@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://caido.io/images/logo.png" alt="Caido" width="120"/>
+  <img src="https://raw.githubusercontent.com/caido/caido/main/brand/png/logo.png" alt="Caido" width="120"/>
 </p>
 
 <h1 align="center">caido-mcp-server</h1>

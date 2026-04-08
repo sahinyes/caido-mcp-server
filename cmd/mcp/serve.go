@@ -77,6 +77,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	tools.RegisterListAutomateSessionsTool(server, client)
 	tools.RegisterGetAutomateSessionTool(server, client)
 	tools.RegisterGetAutomateEntryTool(server, client)
+	tools.RegisterAutomateTaskControlTool(server, client)
 
 	// Replay (Send Requests)
 	tools.RegisterSendRequestTool(server, client)
@@ -86,6 +87,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Findings
 	tools.RegisterListFindingsTool(server, client)
 	tools.RegisterCreateFindingTool(server, client)
+	tools.RegisterDeleteFindingsTool(server, client)
+	tools.RegisterExportFindingsTool(server, client)
 
 	// Sitemap
 	tools.RegisterGetSitemapTool(server, client)
@@ -101,12 +104,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Workflows
 	tools.RegisterListWorkflowsTool(server, client)
 
+	// Environments
+	tools.RegisterListEnvironmentsTool(server, client)
+	tools.RegisterSelectEnvironmentTool(server, client)
+
 	// Instance
 	tools.RegisterGetInstanceTool(server, client)
 
 	// Intercept
 	tools.RegisterInterceptStatusTool(server, client)
 	tools.RegisterInterceptControlTool(server, client)
+	tools.RegisterListInterceptEntriesTool(server, client)
+	tools.RegisterForwardInterceptTool(server, client)
+	tools.RegisterDropInterceptTool(server, client)
 
 	// Filters
 	tools.RegisterListFiltersTool(server, client)

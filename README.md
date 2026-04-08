@@ -32,13 +32,14 @@ Both share the same auth token, the same Go SDK, and the same codebase.
 |----------|-------------|
 | **Proxy History** | Search requests with HTTPQL, get full request/response details |
 | **Replay** | Send HTTP requests, get response inline (status, headers, body) |
-| **Automate** | Access fuzzing sessions, results, and payloads |
-| **Findings** | Create and list security findings linked to requests |
+| **Automate** | Access fuzzing sessions, results, and payloads. Start/pause/resume/cancel tasks |
+| **Findings** | Create, list, delete, and export security findings |
 | **Sitemap** | Browse discovered endpoints |
 | **Scopes** | Create and manage target scope definitions |
 | **Projects** | List and switch between projects |
 | **Workflows** | List automation workflows |
-| **Intercept** | Check status, pause/resume the intercepting proxy |
+| **Intercept** | Check status, pause/resume, list/forward/drop intercepted requests |
+| **Environments** | List and switch variable environments (tokens, keys) |
 | **Filters** | List saved HTTPQL filter presets |
 | **Instance** | Get Caido version and platform info |
 
@@ -110,7 +111,7 @@ Add to `~/.mcp.json` (Claude Code) or your editor's MCP config:
 "What's in scope?"
 ```
 
-### MCP Tools (20)
+### MCP Tools (28)
 
 | Tool | Description |
 |------|-------------|
@@ -122,8 +123,11 @@ Add to `~/.mcp.json` (Claude Code) or your editor's MCP config:
 | `caido_list_automate_sessions` | List fuzzing sessions |
 | `caido_get_automate_session` | Get session details with entry list |
 | `caido_get_automate_entry` | Get fuzz results and payloads |
+| `caido_automate_task_control` | Start/pause/resume/cancel fuzzing tasks |
 | `caido_list_findings` | List security findings |
 | `caido_create_finding` | Create finding linked to a request |
+| `caido_delete_findings` | Delete findings by IDs or reporter name |
+| `caido_export_findings` | Export findings for reporting |
 | `caido_get_sitemap` | Browse sitemap hierarchy |
 | `caido_list_scopes` | List target scopes |
 | `caido_create_scope` | Create new scope with allow/deny lists |
@@ -133,6 +137,11 @@ Add to `~/.mcp.json` (Claude Code) or your editor's MCP config:
 | `caido_get_instance` | Get Caido version and platform info |
 | `caido_intercept_status` | Get intercept status (PAUSED/RUNNING) |
 | `caido_intercept_control` | Pause or resume intercept |
+| `caido_list_intercept_entries` | List queued intercept entries with HTTPQL filtering |
+| `caido_forward_intercept` | Forward intercepted request, optionally with modifications |
+| `caido_drop_intercept` | Drop intercepted request |
+| `caido_list_environments` | List environments and their variables |
+| `caido_select_environment` | Switch active environment |
 | `caido_list_filters` | List saved HTTPQL filter presets |
 
 <details>
@@ -208,6 +217,59 @@ Add to `~/.mcp.json` (Claude Code) or your editor's MCP config:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `action` | string | `pause` or `resume` (required) |
+
+#### caido_list_intercept_entries
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filter` | string | HTTPQL filter query |
+| `limit` | int | Max entries (default 20, max 100) |
+| `after` | string | Pagination cursor |
+
+#### caido_forward_intercept
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Intercept entry ID (required) |
+| `raw` | string | Modified raw HTTP request (base64-encoded, optional) |
+
+#### caido_drop_intercept
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Intercept entry ID (required) |
+
+#### caido_automate_task_control
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | string | `start`, `pause`, `resume`, or `cancel` (required) |
+| `session_id` | string | Automate session ID (required for start) |
+| `task_id` | string | Automate task ID (required for pause/resume/cancel) |
+
+#### caido_delete_findings
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ids` | string[] | Finding IDs to delete |
+| `reporter` | string | Delete all findings by this reporter |
+
+#### caido_export_findings
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ids` | string[] | Finding IDs to export |
+| `reporter` | string | Export all findings by this reporter |
+
+#### caido_list_environments
+
+No parameters required. Returns all environments with variables and selected/global context.
+
+#### caido_select_environment
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Environment ID (required, empty string to deselect) |
 
 </details>
 

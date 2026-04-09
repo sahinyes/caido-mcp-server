@@ -4,10 +4,64 @@ import (
 	"context"
 	"fmt"
 
+	gql "github.com/Khan/genqlient/graphql"
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// tamperSectionOmit mirrors gen.TamperSectionInput with omitempty
+// on all fields. Required because TamperSectionInput is a GraphQL
+// oneof: only one field may be set and the rest must be omitted
+// (not null). genqlient v0.8.1 with use_struct_references:false
+// drops omitempty from nullable struct pointers.
+type tamperSectionOmit struct {
+	RequestAll         *gen.TamperSectionRequestAllInput         `json:"requestAll,omitempty"`
+	RequestBody        *gen.TamperSectionRequestBodyInput        `json:"requestBody,omitempty"`
+	RequestFirstLine   *gen.TamperSectionRequestFirstLineInput   `json:"requestFirstLine,omitempty"`
+	RequestHeader      *gen.TamperSectionRequestHeaderInput      `json:"requestHeader,omitempty"`
+	RequestMethod      *gen.TamperSectionRequestMethodInput      `json:"requestMethod,omitempty"`
+	RequestPath        *gen.TamperSectionRequestPathInput        `json:"requestPath,omitempty"`
+	RequestQuery       *gen.TamperSectionRequestQueryInput       `json:"requestQuery,omitempty"`
+	RequestSNI         *gen.TamperSectionRequestSNIInput         `json:"requestSNI,omitempty"`
+	ResponseAll        *gen.TamperSectionResponseAllInput        `json:"responseAll,omitempty"`
+	ResponseBody       *gen.TamperSectionResponseBodyInput       `json:"responseBody,omitempty"`
+	ResponseFirstLine  *gen.TamperSectionResponseFirstLineInput  `json:"responseFirstLine,omitempty"`
+	ResponseHeader     *gen.TamperSectionResponseHeaderInput     `json:"responseHeader,omitempty"`
+	ResponseStatusCode *gen.TamperSectionResponseStatusCodeInput `json:"responseStatusCode,omitempty"`
+}
+
+type createTamperRuleVars struct {
+	Input createTamperRuleGQLInput `json:"input"`
+}
+
+type createTamperRuleGQLInput struct {
+	CollectionId string            `json:"collectionId"`
+	Name         string            `json:"name"`
+	Section      tamperSectionOmit `json:"section"`
+	Condition    *string           `json:"condition,omitempty"`
+	Sources      []gen.Source      `json:"sources,omitempty"`
+}
+
+type createTamperRuleResp struct {
+	CreateTamperRule struct {
+		Rule *struct {
+			Id   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"rule"`
+		Error *struct {
+			Typename string `json:"__typename"`
+		} `json:"error"`
+	} `json:"createTamperRule"`
+}
+
+const createTamperRuleMutation = `
+mutation CreateTamperRule($input: CreateTamperRuleInput!) {
+	createTamperRule(input: $input) {
+		error { __typename }
+		rule { id name }
+	}
+}`
 
 // CreateTamperRuleInput is the input for the create_tamper_rule tool
 type CreateTamperRuleInput struct {
@@ -46,7 +100,7 @@ func createTamperRuleHandler(
 			)
 		}
 
-		section, err := buildTamperSection(
+		section, err := buildTamperSectionOmit(
 			input.Section, input.Match, input.Replace,
 		)
 		if err != nil {
@@ -58,30 +112,36 @@ func createTamperRuleHandler(
 			sources = append(sources, gen.Source(s))
 		}
 
-		gqlInput := &gen.CreateTamperRuleInput{
-			CollectionId: input.CollectionID,
-			Name:         input.Name,
-			Section:      section,
-			Condition:    input.Condition,
-			Sources:      sources,
+		vars := &createTamperRuleVars{
+			Input: createTamperRuleGQLInput{
+				CollectionId: input.CollectionID,
+				Name:         input.Name,
+				Section:      section,
+				Condition:    input.Condition,
+				Sources:      sources,
+			},
 		}
 
-		resp, err := client.Tamper.CreateRule(ctx, gqlInput)
-		if err != nil {
+		gqlReq := &gql.Request{
+			OpName:    "CreateTamperRule",
+			Query:     createTamperRuleMutation,
+			Variables: vars,
+		}
+		data := &createTamperRuleResp{}
+		gqlResp := &gql.Response{Data: data}
+		if err := client.GraphQL.MakeRequest(
+			ctx, gqlReq, gqlResp,
+		); err != nil {
 			return nil, CreateTamperRuleOutput{}, err
 		}
 
-		payload := resp.CreateTamperRule
+		payload := data.CreateTamperRule
 		if payload.Error != nil {
-			errType := "unknown"
-			if tn := (*payload.Error).GetTypename(); tn != nil {
-				errType = *tn
-			}
 			return nil, CreateTamperRuleOutput{}, fmt.Errorf(
-				"create tamper rule failed: %s", errType,
+				"create tamper rule failed: %s",
+				payload.Error.Typename,
 			)
 		}
-
 		if payload.Rule == nil {
 			return nil, CreateTamperRuleOutput{}, fmt.Errorf(
 				"create tamper rule returned no rule",
@@ -95,11 +155,12 @@ func createTamperRuleHandler(
 	}
 }
 
-// buildTamperSection constructs a TamperSectionInput from the
-// section name and optional match/replace strings.
-func buildTamperSection(
+// buildTamperSectionOmit constructs a tamperSectionOmit from the
+// section name and optional match/replace strings. Uses the omitempty
+// wrapper to avoid serializing unset oneof variants as null.
+func buildTamperSectionOmit(
 	section, match, replace string,
-) (gen.TamperSectionInput, error) {
+) (tamperSectionOmit, error) {
 	matcher := gen.TamperMatcherRawInput{
 		Regex: &gen.TamperMatcherRegexInput{Regex: match},
 	}
@@ -123,7 +184,7 @@ func buildTamperSection(
 		}
 	}
 
-	var s gen.TamperSectionInput
+	var s tamperSectionOmit
 	switch section {
 	case "requestAll":
 		s.RequestAll = &gen.TamperSectionRequestAllInput{

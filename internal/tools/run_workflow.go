@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	caido "github.com/caido-community/sdk-go"
@@ -83,8 +84,13 @@ func runWorkflowHandler(
 				)
 			}
 
+			// Blob type requires base64 encoding.
+			encoded := base64.StdEncoding.EncodeToString(
+				[]byte(*input.Input),
+			)
+
 			resp, err := client.Workflows.RunConvert(
-				ctx, input.ID, *input.Input,
+				ctx, input.ID, encoded,
 			)
 			if err != nil {
 				return nil, RunWorkflowOutput{}, err
@@ -101,8 +107,23 @@ func runWorkflowHandler(
 				)
 			}
 
+			// Decode base64 output if present.
+			var output *string
+			if payload.Output != nil {
+				decoded, decErr := base64.StdEncoding.DecodeString(
+					*payload.Output,
+				)
+				if decErr != nil {
+					// Not base64 -- return as-is.
+					output = payload.Output
+				} else {
+					s := string(decoded)
+					output = &s
+				}
+			}
+
 			return nil, RunWorkflowOutput{
-				Output: payload.Output,
+				Output: output,
 			}, nil
 
 		default:

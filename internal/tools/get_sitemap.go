@@ -38,7 +38,7 @@ func getSitemapHandler(
 		req *mcp.CallToolRequest,
 		input GetSitemapInput,
 	) (*mcp.CallToolResult, GetSitemapOutput, error) {
-		var entries []SitemapEntrySummary
+		entries := make([]SitemapEntrySummary, 0)
 
 		if input.ParentID == "" {
 			resp, err := client.Sitemap.ListRootEntries(ctx, nil)

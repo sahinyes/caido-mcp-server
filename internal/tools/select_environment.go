@@ -76,6 +76,6 @@ func RegisterSelectEnvironmentTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_select_environment",
-		Description: `Select active environment. Variables from selected env are used in replay placeholders. Pass empty id to deselect.`,
+		Description: `Select active environment. Variables from selected env are used in replay placeholders. Pass empty id to deselect. Note: the Global environment (usually id "1") is always active and cannot be selected via this API.`,
 	}, selectEnvironmentHandler(client))
 }

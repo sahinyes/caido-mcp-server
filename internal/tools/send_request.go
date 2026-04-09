@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
@@ -28,14 +27,31 @@ type SendRequestInput struct {
 
 // SendRequestOutput is the output of the send_request tool
 type SendRequestOutput struct {
-	RequestID   string                `json:"requestId,omitempty"`
-	EntryID     string                `json:"entryId,omitempty"`
-	SessionID   string                `json:"sessionId"`
-	StatusCode  int                   `json:"statusCode,omitempty"`
-	RoundtripMs int                   `json:"roundtripMs,omitempty"`
+	RequestID   string                  `json:"requestId,omitempty"`
+	EntryID     string                  `json:"entryId,omitempty"`
+	SessionID   string                  `json:"sessionId"`
+	StatusCode  int                     `json:"statusCode,omitempty"`
+	RoundtripMs int                     `json:"roundtripMs,omitempty"`
 	Request     *httputil.ParsedMessage `json:"request,omitempty"`
 	Response    *httputil.ParsedMessage `json:"response,omitempty"`
-	Error       string                `json:"error,omitempty"`
+	Error       string                  `json:"error,omitempty"`
+}
+
+// isTaskInProgress checks whether the error from
+// StartReplayTask is a TaskInProgressUserError.
+func isTaskInProgress(
+	resp *gen.StartReplayTaskResponse,
+) bool {
+	if resp == nil {
+		return false
+	}
+	payload := resp.GetStartReplayTask()
+	errPtr := payload.GetError()
+	if errPtr == nil {
+		return false
+	}
+	_, ok := (*errPtr).(*gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError)
+	return ok
 }
 
 // sendRequestHandler creates the handler function
@@ -113,14 +129,14 @@ func sendRequestHandler(
 		rawBase64 := base64.StdEncoding.EncodeToString([]byte(raw))
 
 		taskInput := &gen.StartReplayTaskInput{
-			Connection: &gen.ConnectionInfoInput{
+			Connection: gen.ConnectionInfoInput{
 				Host:  host,
 				Port:  port,
 				IsTLS: useTLS,
 			},
 			Raw: rawBase64,
-			Settings: &gen.ReplayEntrySettingsInput{
-				Placeholders:        []*gen.ReplayPlaceholderInput{},
+			Settings: gen.ReplayEntrySettingsInput{
+				Placeholders:        []gen.ReplayPlaceholderInput{},
 				UpdateContentLength: true,
 				ConnectionClose:     false,
 			},
@@ -129,45 +145,30 @@ func sendRequestHandler(
 		taskResp, err := client.Replay.SendRequest(
 			ctx, sessionID, taskInput,
 		)
-		if err != nil || (taskResp.StartReplayTask != nil &&
-			taskResp.StartReplayTask.Error != nil) {
-			isTaskInProgress := false
-			if err != nil {
-				isTaskInProgress = strings.Contains(
-					err.Error(), "TaskInProgressUserError",
+		if err != nil || isTaskInProgress(taskResp) {
+			// Session busy or error - create a new session and retry.
+			newResp, createErr := client.Replay.CreateSession(
+				ctx, &gen.CreateReplaySessionInput{},
+			)
+			if createErr != nil {
+				return nil, SendRequestOutput{}, fmt.Errorf(
+					"failed to create fallback session: %w",
+					createErr,
 				)
-			} else if taskResp.StartReplayTask.Error != nil {
-				isTaskInProgress = true
+			}
+			sessionID = newResp.CreateReplaySession.Session.Id
+
+			if input.SessionID == "" {
+				replay.ResetDefaultSession(sessionID)
 			}
 
-			if isTaskInProgress {
-				newResp, createErr := client.Replay.CreateSession(
-					ctx, &gen.CreateReplaySessionInput{},
-				)
-				if createErr != nil {
-					return nil, SendRequestOutput{}, fmt.Errorf(
-						"failed to create fallback session: %w",
-						createErr,
-					)
-				}
-				sessionID = newResp.CreateReplaySession.Session.Id
-
-				if input.SessionID == "" {
-					replay.ResetDefaultSession(sessionID)
-				}
-
-				previousEntryID = ""
-				_, err = client.Replay.SendRequest(
-					ctx, sessionID, taskInput,
-				)
-				if err != nil {
-					return nil, SendRequestOutput{}, fmt.Errorf(
-						"failed to send request (retry): %w", err,
-					)
-				}
-			} else if err != nil {
+			previousEntryID = ""
+			_, err = client.Replay.SendRequest(
+				ctx, sessionID, taskInput,
+			)
+			if err != nil {
 				return nil, SendRequestOutput{}, fmt.Errorf(
-					"failed to send request: %w", err,
+					"failed to send request (retry): %w", err,
 				)
 			}
 		}

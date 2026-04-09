@@ -91,7 +91,7 @@ func listRequestsHandler(
 			output.Requests = append(output.Requests, summary)
 		}
 
-		if conn.PageInfo != nil && conn.PageInfo.HasNextPage {
+		if conn.PageInfo.HasNextPage {
 			output.HasMore = true
 			if conn.PageInfo.EndCursor != nil {
 				output.NextCursor = *conn.PageInfo.EndCursor

@@ -81,15 +81,10 @@ func listInterceptEntriesHandler(
 			),
 		}
 
-		if conn.Count != nil {
-			output.Total = conn.Count.Value
-		}
+		output.Total = conn.Count.Value
 
 		for _, edge := range conn.Edges {
 			e := edge.Node
-			if e.Request == nil {
-				continue
-			}
 			r := e.Request
 			summary := InterceptEntrySummary{
 				ID:        e.Id,
@@ -108,7 +103,7 @@ func listInterceptEntriesHandler(
 			output.Entries = append(output.Entries, summary)
 		}
 
-		if conn.PageInfo != nil && conn.PageInfo.HasNextPage {
+		if conn.PageInfo.HasNextPage {
 			output.HasMore = true
 			if conn.PageInfo.EndCursor != nil {
 				output.NextCursor = *conn.PageInfo.EndCursor

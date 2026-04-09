@@ -47,11 +47,6 @@ func selectProjectHandler(
 		}
 
 		cp := payload.CurrentProject
-		if cp.Project == nil {
-			return nil, SelectProjectOutput{}, fmt.Errorf(
-				"no project returned after select",
-			)
-		}
 		return nil, SelectProjectOutput{
 			ID:   cp.Project.Id,
 			Name: cp.Project.Name,

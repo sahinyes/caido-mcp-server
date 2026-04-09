@@ -4,10 +4,69 @@ import (
 	"context"
 	"fmt"
 
+	gql "github.com/Khan/genqlient/graphql"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type deleteFindingsByIDsVars struct {
+	Input *deleteFindingsByIDsInput `json:"input"`
+}
+
+type deleteFindingsByIDsInput struct {
+	Ids []string `json:"ids"`
+}
+
+type deleteFindingsByReporterVars struct {
+	Input *deleteFindingsByReporterInput `json:"input"`
+}
+
+type deleteFindingsByReporterInput struct {
+	Reporter string `json:"reporter"`
+}
+
+type deleteFindingsResp struct {
+	DeleteFindings struct {
+		DeletedIds []string `json:"deletedIds"`
+	} `json:"deleteFindings"`
+}
+
+const deleteFindingsMutation = `
+mutation DeleteFindings ($input: DeleteFindingsInput!) {
+	deleteFindings(input: $input) {
+		deletedIds
+	}
+}`
+
+func deleteFindingsRaw(
+	ctx context.Context,
+	gqlClient gql.Client,
+	ids []string,
+	reporter string,
+) (*deleteFindingsResp, error) {
+	var vars interface{}
+	if len(ids) > 0 {
+		vars = &deleteFindingsByIDsVars{
+			Input: &deleteFindingsByIDsInput{Ids: ids},
+		}
+	} else {
+		vars = &deleteFindingsByReporterVars{
+			Input: &deleteFindingsByReporterInput{Reporter: reporter},
+		}
+	}
+
+	req := &gql.Request{
+		OpName:    "DeleteFindings",
+		Query:     deleteFindingsMutation,
+		Variables: vars,
+	}
+	data := &deleteFindingsResp{}
+	resp := &gql.Response{Data: data}
+	if err := gqlClient.MakeRequest(ctx, req, resp); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
 
 // DeleteFindingsInput is the input for the tool
 type DeleteFindingsInput struct {
@@ -34,14 +93,9 @@ func deleteFindingsHandler(
 			)
 		}
 
-		delInput := &gen.DeleteFindingsInput{}
-		if len(input.IDs) > 0 {
-			delInput.Ids = input.IDs
-		} else {
-			delInput.Reporter = &input.Reporter
-		}
-
-		resp, err := client.Findings.Delete(ctx, delInput)
+		resp, err := deleteFindingsRaw(
+			ctx, client.GraphQL, input.IDs, input.Reporter,
+		)
 		if err != nil {
 			return nil, DeleteFindingsOutput{}, err
 		}

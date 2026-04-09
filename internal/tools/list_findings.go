@@ -76,7 +76,7 @@ func listFindingsHandler(
 			),
 		}
 
-		if conn.PageInfo != nil && conn.PageInfo.HasNextPage {
+		if conn.PageInfo.HasNextPage {
 			output.HasMore = true
 			if conn.PageInfo.EndCursor != nil {
 				output.NextCursor = *conn.PageInfo.EndCursor
@@ -95,9 +95,7 @@ func listFindingsHandler(
 					time.RFC3339,
 				),
 				Description: f.Description,
-			}
-			if f.Request != nil {
-				summary.RequestID = f.Request.Id
+				RequestID:   f.Request.Id,
 			}
 			output.Findings = append(output.Findings, summary)
 		}

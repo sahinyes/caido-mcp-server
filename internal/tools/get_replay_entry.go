@@ -72,11 +72,9 @@ func getReplayEntryHandler(
 			}
 		}
 
-		if entry.Connection != nil {
-			output.Host = entry.Connection.Host
-			output.Port = entry.Connection.Port
-			output.IsTLS = entry.Connection.IsTLS
-		}
+		output.Host = entry.Connection.Host
+		output.Port = entry.Connection.Port
+		output.IsTLS = entry.Connection.IsTLS
 
 		if entry.Request != nil && entry.Request.Response != nil {
 			r := entry.Request.Response

@@ -3,14 +3,14 @@ module github.com/c0tton-fluff/caido-mcp-server
 go 1.24.0
 
 require (
-	github.com/caido-community/sdk-go v0.3.0
+	github.com/Khan/genqlient v0.8.1
+	github.com/caido-community/sdk-go v0.4.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/spf13/cobra v1.10.2
 )
 
 require (
-	github.com/Khan/genqlient v0.8.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alexflint/go-arg v1.5.1 // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect

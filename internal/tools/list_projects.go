@@ -44,8 +44,7 @@ func listProjectsHandler(
 		}
 
 		var currentID string
-		if currentResp.CurrentProject != nil &&
-			currentResp.CurrentProject.Project != nil {
+		if currentResp.CurrentProject != nil {
 			currentID = currentResp.CurrentProject.Project.Id
 		}
 

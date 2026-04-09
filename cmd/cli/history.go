@@ -89,7 +89,7 @@ func runHistory(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	if conn.PageInfo != nil && conn.PageInfo.HasNextPage &&
+	if conn.PageInfo.HasNextPage &&
 		conn.PageInfo.EndCursor != nil {
 		fmt.Printf("\n--after %s\n", *conn.PageInfo.EndCursor)
 	}

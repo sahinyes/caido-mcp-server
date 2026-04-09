@@ -4,10 +4,83 @@ import (
 	"context"
 	"fmt"
 
+	gql "github.com/Khan/genqlient/graphql"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type exportFindingsByIDsVars struct {
+	Input *exportFindingsByIDsInput `json:"input"`
+}
+
+type exportFindingsByIDsInput struct {
+	Ids []string `json:"ids"`
+}
+
+type exportFindingsByFilterVars struct {
+	Input *exportFindingsByFilterInput `json:"input"`
+}
+
+type exportFindingsByFilterInput struct {
+	Filter *exportFindingsFilter `json:"filter"`
+}
+
+type exportFindingsFilter struct {
+	Reporter string `json:"reporter"`
+}
+
+type exportFindingsPayload struct {
+	Export *struct {
+		Id string `json:"id"`
+	} `json:"export"`
+	Error *struct {
+		Typename string `json:"__typename"`
+	} `json:"error"`
+}
+
+type exportFindingsResp struct {
+	ExportFindings *exportFindingsPayload `json:"exportFindings"`
+}
+
+const exportFindingsMutation = `
+mutation ExportFindings ($input: ExportFindingsInput!) {
+	exportFindings(input: $input) {
+		export { id }
+		error { __typename ... on OtherUserError { code } }
+	}
+}`
+
+func exportFindingsRaw(
+	ctx context.Context,
+	gqlClient gql.Client,
+	ids []string,
+	reporter string,
+) (*exportFindingsResp, error) {
+	var vars interface{}
+	if len(ids) > 0 {
+		vars = &exportFindingsByIDsVars{
+			Input: &exportFindingsByIDsInput{Ids: ids},
+		}
+	} else {
+		vars = &exportFindingsByFilterVars{
+			Input: &exportFindingsByFilterInput{
+				Filter: &exportFindingsFilter{Reporter: reporter},
+			},
+		}
+	}
+
+	req := &gql.Request{
+		OpName:    "ExportFindings",
+		Query:     exportFindingsMutation,
+		Variables: vars,
+	}
+	data := &exportFindingsResp{}
+	resp := &gql.Response{Data: data}
+	if err := gqlClient.MakeRequest(ctx, req, resp); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
 
 // ExportFindingsInput is the input for the tool
 type ExportFindingsInput struct {
@@ -34,24 +107,28 @@ func exportFindingsHandler(
 			)
 		}
 
-		expInput := &gen.ExportFindingsInput{}
-		if len(input.IDs) > 0 {
-			expInput.Ids = input.IDs
-		} else {
-			expInput.Filter = &gen.FilterClauseFindingInput{
-				Reporter: &input.Reporter,
-			}
-		}
-
-		resp, err := client.Findings.Export(ctx, expInput)
+		resp, err := exportFindingsRaw(
+			ctx, client.GraphQL, input.IDs, input.Reporter,
+		)
 		if err != nil {
 			return nil, ExportFindingsOutput{}, err
 		}
 
 		payload := resp.ExportFindings
+		if payload == nil {
+			return nil, ExportFindingsOutput{}, fmt.Errorf(
+				"export findings returned no payload",
+			)
+		}
 		if payload.Error != nil {
 			return nil, ExportFindingsOutput{}, fmt.Errorf(
-				"export findings failed",
+				"export findings failed: %s",
+				payload.Error.Typename,
+			)
+		}
+		if payload.Export == nil {
+			return nil, ExportFindingsOutput{}, fmt.Errorf(
+				"export findings returned no export",
 			)
 		}
 

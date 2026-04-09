@@ -35,14 +35,14 @@ func sendReplay(
 
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
 	taskInput := &gen.StartReplayTaskInput{
-		Connection: &gen.ConnectionInfoInput{
+		Connection: gen.ConnectionInfoInput{
 			Host:  host,
 			Port:  port,
 			IsTLS: useTLS,
 		},
 		Raw: rawB64,
-		Settings: &gen.ReplayEntrySettingsInput{
-			Placeholders:        []*gen.ReplayPlaceholderInput{},
+		Settings: gen.ReplayEntrySettingsInput{
+			Placeholders:        []gen.ReplayPlaceholderInput{},
 			UpdateContentLength: true,
 			ConnectionClose:     false,
 		},
@@ -51,9 +51,9 @@ func sendReplay(
 	taskResp, err := client.Replay.SendRequest(
 		ctx, sessionID, taskInput,
 	)
-	if err != nil || (taskResp != nil &&
-		taskResp.StartReplayTask != nil &&
-		taskResp.StartReplayTask.Error != nil) {
+	hasError := taskResp != nil &&
+		taskResp.StartReplayTask.GetError() != nil
+	if err != nil || hasError {
 		isTaskBusy := false
 		if err != nil {
 			isTaskBusy = strings.Contains(

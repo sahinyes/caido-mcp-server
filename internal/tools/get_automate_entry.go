@@ -101,9 +101,9 @@ func getAutomateEntryHandler(
 		}
 
 		reqEntry := reqResp.AutomateEntry
-		if reqEntry != nil && reqEntry.Requests != nil {
+		if reqEntry != nil {
 			reqs := reqEntry.Requests
-			if reqs.PageInfo != nil && reqs.PageInfo.HasNextPage {
+			if reqs.PageInfo.HasNextPage {
 				output.HasMore = true
 				if reqs.PageInfo.EndCursor != nil {
 					output.NextCursor = *reqs.PageInfo.EndCursor
@@ -130,20 +130,18 @@ func getAutomateEntryHandler(
 					SequenceID: r.SequenceId,
 					Payloads:   payloads,
 					Error:      r.Error,
-				}
-
-				if r.Request != nil {
-					result.RequestID = r.Request.Id
-					result.Method = r.Request.Method
-					result.URL = httputil.BuildURL(
+					RequestID:  r.Request.Id,
+					Method:     r.Request.Method,
+					URL: httputil.BuildURL(
 						r.Request.IsTls, r.Request.Host,
 						r.Request.Port, r.Request.Path,
 						r.Request.Query,
-					)
-					if r.Request.Response != nil {
-						result.StatusCode = r.Request.Response.StatusCode
-						result.RoundtripMs = r.Request.Response.RoundtripTime
-					}
+					),
+				}
+
+				if r.Request.Response != nil {
+					result.StatusCode = r.Request.Response.StatusCode
+					result.RoundtripMs = r.Request.Response.RoundtripTime
 				}
 
 				output.Results = append(output.Results, result)

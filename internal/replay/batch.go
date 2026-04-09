@@ -156,14 +156,14 @@ func executeSingle(
 
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
 	taskInput := &gen.StartReplayTaskInput{
-		Connection: &gen.ConnectionInfoInput{
+		Connection: gen.ConnectionInfoInput{
 			Host:  host,
 			Port:  port,
 			IsTLS: useTLS,
 		},
 		Raw: rawB64,
-		Settings: &gen.ReplayEntrySettingsInput{
-			Placeholders:        []*gen.ReplayPlaceholderInput{},
+		Settings: gen.ReplayEntrySettingsInput{
+			Placeholders:        []gen.ReplayPlaceholderInput{},
 			UpdateContentLength: true,
 			ConnectionClose:     false,
 		},

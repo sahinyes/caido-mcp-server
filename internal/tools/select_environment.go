@@ -2,8 +2,10 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	caido "github.com/caido-community/sdk-go"
+	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -36,7 +38,27 @@ func selectEnvironmentHandler(
 			return nil, SelectEnvironmentOutput{}, err
 		}
 
-		env := resp.SelectEnvironment.Environment
+		payload := resp.GetSelectEnvironment()
+
+		if errPtr := payload.GetError(); errPtr != nil {
+			errIface := *errPtr
+			typename := ""
+			if t := errIface.GetTypename(); t != nil {
+				typename = *t
+			}
+			// Check for OtherUserError with code.
+			if other, ok := errIface.(*gen.SelectEnvironmentSelectEnvironmentSelectEnvironmentPayloadErrorOtherUserError); ok {
+				return nil, SelectEnvironmentOutput{}, fmt.Errorf(
+					"select environment failed: %s: %s",
+					typename, other.GetCode(),
+				)
+			}
+			return nil, SelectEnvironmentOutput{}, fmt.Errorf(
+				"select environment failed: %s", typename,
+			)
+		}
+
+		env := payload.GetEnvironment()
 		if env == nil {
 			return nil, SelectEnvironmentOutput{}, nil
 		}

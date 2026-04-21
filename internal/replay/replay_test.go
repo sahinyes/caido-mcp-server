@@ -45,9 +45,16 @@ func TestGetOrCreateSession_ReturnsCachedSession(t *testing.T) {
 }
 
 func TestConstants(t *testing.T) {
-	if PollInterval != 500*time.Millisecond {
+	if pollInitInterval != 50*time.Millisecond {
 		t.Fatalf(
-			"expected PollInterval 500ms, got %v", PollInterval,
+			"expected pollInitInterval 50ms, got %v",
+			pollInitInterval,
+		)
+	}
+	if pollMaxInterval != 500*time.Millisecond {
+		t.Fatalf(
+			"expected pollMaxInterval 500ms, got %v",
+			pollMaxInterval,
 		)
 	}
 	if PollMaxRetries != 20 {

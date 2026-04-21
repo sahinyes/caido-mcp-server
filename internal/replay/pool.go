@@ -98,3 +98,16 @@ func (p *SessionPool) Size() int {
 	defer p.mu.Unlock()
 	return len(p.created)
 }
+
+// Cleanup deletes all sessions created by this pool.
+func (p *SessionPool) Cleanup(ctx context.Context) {
+	p.mu.Lock()
+	ids := make([]string, len(p.created))
+	copy(ids, p.created)
+	p.mu.Unlock()
+
+	if len(ids) == 0 {
+		return
+	}
+	_, _ = p.client.Replay.DeleteSessions(ctx, ids)
+}

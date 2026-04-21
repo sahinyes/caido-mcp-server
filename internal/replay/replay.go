@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	PollInterval   = 500 * time.Millisecond
-	PollMaxRetries = 20
+	pollInitInterval = 50 * time.Millisecond
+	pollMaxInterval  = 500 * time.Millisecond
+	PollMaxRetries   = 20
 )
 
 var (
@@ -52,6 +53,7 @@ func PollForEntry(
 	client *caido.Client,
 	sessionID, prevEntryID string,
 ) (*gen.GetReplayEntryReplayEntry, error) {
+	interval := pollInitInterval
 	for range PollMaxRetries {
 		sessResp, err := client.Replay.GetSession(ctx, sessionID)
 		if err != nil {
@@ -75,11 +77,11 @@ func PollForEntry(
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(PollInterval):
+		case <-time.After(interval):
 		}
+		interval = min(interval*2, pollMaxInterval)
 	}
 	return nil, fmt.Errorf(
-		"timed out after %ds waiting for response",
-		PollMaxRetries/2,
+		"timed out waiting for response",
 	)
 }

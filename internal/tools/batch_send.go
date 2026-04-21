@@ -124,11 +124,6 @@ func RegisterBatchSendTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "caido_batch_send",
-		Description: `Send multiple HTTP requests in parallel and return all responses. ` +
-			`Creates a session pool, dispatches requests concurrently, polls for results. ` +
-			`Use for: BAC token sweeps (same endpoint, different auth), parameter fuzzing ` +
-			`(same endpoint, different values), endpoint sweeps (different URLs, same auth). ` +
-			`Max 50 requests per batch. Each request needs a label and raw HTTP. ` +
-			`Returns results array with statusCode, headers, body per request.`,
+		Description: `Send multiple HTTP requests in parallel. Use for BAC token sweeps, parameter fuzzing, or endpoint sweeps. Max 50 per batch. Returns statusCode, headers, body per request.`,
 	}, batchSendHandler(client))
 }

@@ -63,6 +63,6 @@ func RegisterInterceptControlTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_intercept_control",
-		Description: `Toggle intercept. Params: action (pause/resume).`,
+		Description: `Pause or resume the intercept proxy. Pausing lets requests flow through unmodified.`,
 	}, interceptControlHandler(client))
 }

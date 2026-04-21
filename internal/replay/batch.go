@@ -73,6 +73,7 @@ func RunBatch(
 		}
 		return results
 	}
+	defer pool.Cleanup(context.WithoutCancel(ctx))
 
 	results := make([]BatchResult, n)
 	var wg sync.WaitGroup

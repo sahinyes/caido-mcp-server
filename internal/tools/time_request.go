@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	caido "github.com/caido-community/sdk-go"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -28,24 +29,25 @@ type TimingRequestInput struct {
 type TimingSample struct {
 	Index     int    `json:"index"`
 	Payload   string `json:"payload,omitempty"`
-	ElapsedMs int    `json:"elapsed_ms"`
+	ElapsedNs int64  `json:"elapsed_ns"`           // client-side monotonic clock
+	ElapsedMs int    `json:"elapsed_ms,omitempty"` // server-side Caido RoundtripTime (reference)
 	Status    int    `json:"statusCode,omitempty"`
 	Error     string `json:"error,omitempty"`
 }
 
-// TimingSummary holds aggregate stats across all samples
+// TimingSummary holds aggregate stats across all samples (nanoseconds)
 type TimingSummary struct {
-	MinMs    int `json:"min_ms"`
-	MedianMs int `json:"median_ms"`
-	P95Ms    int `json:"p95_ms"`
-	MaxMs    int `json:"max_ms"`
-	Count    int `json:"count"`
+	MinNs    int64 `json:"min_ns"`
+	MedianNs int64 `json:"median_ns"`
+	P95Ns    int64 `json:"p95_ns"`
+	MaxNs    int64 `json:"max_ns"`
+	Count    int   `json:"count"`
 }
 
-// TimingPerPayload holds stats for a single payload value
+// TimingPerPayload holds stats for a single payload value (nanoseconds)
 type TimingPerPayload struct {
-	MedianMs int `json:"median_ms"`
-	Count    int `json:"count"`
+	MedianNs int64 `json:"median_ns"`
+	Count    int   `json:"count"`
 }
 
 // TimingRequestOutput is the output of the time_request tool
@@ -81,8 +83,8 @@ func timeRequestHandler(
 		}
 
 		allSamples := make([]TimingSample, 0, samples*len(payloads))
-		allMs := make([]int, 0, samples*len(payloads))
-		perPayload := make(map[string][]int)
+		allNs := make([]int64, 0, samples*len(payloads))
+		perPayload := make(map[string][]int64)
 
 		idx := 0
 		for _, payload := range payloads {
@@ -100,7 +102,10 @@ func timeRequestHandler(
 					SessionID: input.SessionID,
 				}
 
+				start := time.Now()
 				result, err := executeSendRequest(ctx, client, sendInput)
+				elapsedNs := time.Since(start).Nanoseconds()
+
 				sample := TimingSample{
 					Index:   idx,
 					Payload: payload,
@@ -108,10 +113,11 @@ func timeRequestHandler(
 				if err != nil {
 					sample.Error = err.Error()
 				} else {
+					sample.ElapsedNs = elapsedNs
 					sample.ElapsedMs = result.ElapsedMs
 					sample.Status = result.StatusCode
-					allMs = append(allMs, result.ElapsedMs)
-					perPayload[payload] = append(perPayload[payload], result.ElapsedMs)
+					allNs = append(allNs, elapsedNs)
+					perPayload[payload] = append(perPayload[payload], elapsedNs)
 				}
 
 				allSamples = append(allSamples, sample)
@@ -123,18 +129,18 @@ func timeRequestHandler(
 			Samples: allSamples,
 		}
 
-		if len(allMs) > 0 {
-			output.Summary = computeTimingSummary(allMs)
+		if len(allNs) > 0 {
+			output.Summary = computeTimingSummary(allNs)
 		}
 
 		if len(payloads) > 1 || (len(payloads) == 1 && payloads[0] != "") {
 			output.PerPayload = make(map[string]*TimingPerPayload)
-			for p, ms := range perPayload {
-				if len(ms) > 0 {
-					s := computeTimingSummary(ms)
+			for p, ns := range perPayload {
+				if len(ns) > 0 {
+					s := computeTimingSummary(ns)
 					output.PerPayload[p] = &TimingPerPayload{
-						MedianMs: s.MedianMs,
-						Count:    len(ms),
+						MedianNs: s.MedianNs,
+						Count:    len(ns),
 					}
 				}
 			}
@@ -160,10 +166,10 @@ func executeSendRequest(
 	return out, nil
 }
 
-func computeTimingSummary(ms []int) TimingSummary {
-	sorted := make([]int, len(ms))
-	copy(sorted, ms)
-	sort.Ints(sorted)
+func computeTimingSummary(ns []int64) TimingSummary {
+	sorted := make([]int64, len(ns))
+	copy(sorted, ns)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
 
 	n := len(sorted)
 	min := sorted[0]
@@ -181,10 +187,10 @@ func computeTimingSummary(ms []int) TimingSummary {
 	p95 := sorted[p95idx]
 
 	return TimingSummary{
-		MinMs:    min,
-		MedianMs: median,
-		P95Ms:    p95,
-		MaxMs:    max,
+		MinNs:    min,
+		MedianNs: median,
+		P95Ns:    p95,
+		MaxNs:    max,
 		Count:    n,
 	}
 }
@@ -195,9 +201,10 @@ func RegisterTimeRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "caido_time_request",
-		Description: `Send a request N times and measure response timing (ms). ` +
-			`Use payloads+payloadField for A/B timing (e.g. sleep oracle detection). ` +
-			`Returns samples array + min/median/p95/max summary. ` +
-			`Note: timing is measured in milliseconds (Caido RoundtripTime resolution).`,
+		Description: `Send a request N times and measure response timing (ns, client-side monotonic clock). ` +
+			`Includes MCP+SDK overhead in measurement (~50-200ms typical). ` +
+			`Server-side Caido RoundtripTime (ms) also returned per sample for comparison. ` +
+			`Use payloads+payloadField for A/B timing (sleep oracle detection). ` +
+			`Statistical filtering via median/p95 recommended for sub-second delay detection.`,
 	}, timeRequestHandler(client))
 }

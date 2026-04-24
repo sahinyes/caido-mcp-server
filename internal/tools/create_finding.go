@@ -76,8 +76,12 @@ func createFindingHandler(
 
 		payload := resp.CreateFinding
 		if payload.Error != nil {
+			typename := "unknown"
+			if tn := (*payload.Error).GetTypename(); tn != nil {
+				typename = *tn
+			}
 			return nil, CreateFindingOutput{}, fmt.Errorf(
-				"create finding failed",
+				"create finding failed: %s", typename,
 			)
 		}
 

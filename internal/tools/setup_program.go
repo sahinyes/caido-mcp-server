@@ -78,32 +78,21 @@ func setupProgramHandler(
 			)
 		}
 
-		// Step 3: create scope
+		// Step 3: find or create scope (idempotent)
 		scopeName := setupPrefix + input.ProjectName
 		denylist := input.ScopeExclude
 		if denylist == nil {
 			denylist = []string{}
 		}
-		scopeResp, err := client.Scopes.Create(ctx, &gen.CreateScopeInput{
-			Name:      scopeName,
-			Allowlist: input.ScopeInclude,
-			Denylist:  denylist,
-		})
+		scopeResult, err := findOrCreateScope(
+			ctx, client, scopeName, input.ScopeInclude, denylist,
+		)
 		if err != nil {
 			return nil, SetupProgramOutput{}, fmt.Errorf(
-				"create scope failed: %w", err,
+				"scope step failed: %w", err,
 			)
 		}
-		scopePayload := scopeResp.CreateScope
-		if scopePayload.Scope == nil {
-			notes = append(notes, "scope creation returned no scope — may already exist")
-		} else {
-			output.Scope = SetupProgramStepResult{
-				ID:      scopePayload.Scope.Id,
-				Name:    scopePayload.Scope.Name,
-				Created: true,
-			}
-		}
+		output.Scope = scopeResult
 
 		// Step 4: get or create tamper collection for mcp-setup rules
 		collectionID, err := findOrCreateTamperCollection(ctx, client)
@@ -138,9 +127,10 @@ func setupProgramHandler(
 
 		output.Notes = notes
 		output.Summary = fmt.Sprintf(
-			"project %q selected (%s), scope created, %d tamper rule(s) applied",
+			"project %q selected (%s), scope %s, %d tamper rule(s) applied",
 			input.ProjectName,
 			map[bool]string{true: "new", false: "existing"}[output.Project.Created],
+			map[bool]string{true: "created", false: "already existed"}[output.Scope.Created],
 			len(output.TamperRules),
 		)
 
@@ -181,6 +171,45 @@ func findOrCreateProject(
 	return SetupProgramStepResult{
 		ID:      p.Id,
 		Name:    p.Name,
+		Created: true,
+	}, nil
+}
+
+func findOrCreateScope(
+	ctx context.Context,
+	client *caido.Client,
+	name string,
+	allowlist, denylist []string,
+) (SetupProgramStepResult, error) {
+	listResp, err := client.Scopes.List(ctx)
+	if err != nil {
+		return SetupProgramStepResult{}, err
+	}
+	for _, s := range listResp.Scopes {
+		if s.Name == name {
+			return SetupProgramStepResult{
+				ID:      s.Id,
+				Name:    s.Name,
+				Created: false,
+			}, nil
+		}
+	}
+
+	createResp, err := client.Scopes.Create(ctx, &gen.CreateScopeInput{
+		Name:      name,
+		Allowlist: allowlist,
+		Denylist:  denylist,
+	})
+	if err != nil {
+		return SetupProgramStepResult{}, err
+	}
+	if createResp.CreateScope.Scope == nil {
+		return SetupProgramStepResult{}, fmt.Errorf("create scope returned no scope")
+	}
+	s := createResp.CreateScope.Scope
+	return SetupProgramStepResult{
+		ID:      s.Id,
+		Name:    s.Name,
 		Created: true,
 	}, nil
 }
@@ -259,7 +288,7 @@ func applyHeaderTamperRule(
 		return SetupProgramStepResult{}, err
 	}
 
-	sources := []gen.Source{"INTERCEPT", "REPLAY", "AUTOMATE"}
+	sources := []gen.Source{"INTERCEPT", "AUTOMATE"}
 	vars := &createTamperRuleVars{
 		Input: createTamperRuleGQLInput{
 			CollectionId: collectionID,
@@ -306,7 +335,7 @@ func rawUpdateTamperRule(
 		return UpdateTamperRuleOutput{}, err
 	}
 
-	sources := []gen.Source{"INTERCEPT", "REPLAY", "AUTOMATE"}
+	sources := []gen.Source{"INTERCEPT", "AUTOMATE"}
 	vars := &updateTamperRuleVars{
 		ID: id,
 		Input: updateTamperRuleGQLIn{

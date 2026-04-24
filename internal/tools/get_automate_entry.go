@@ -14,7 +14,7 @@ import (
 // GetAutomateEntryInput is the input for the get_automate_entry tool
 type GetAutomateEntryInput struct {
 	ID    string `json:"id" jsonschema:"required,Automate entry ID"`
-	Limit int    `json:"limit,omitempty" jsonschema:"Maximum number of fuzz results to return (default 50, max 100)"`
+	Limit int    `json:"limit,omitempty" jsonschema:"Maximum number of fuzz results to return (default 20, max 100)"`
 	After string `json:"after,omitempty" jsonschema:"Cursor for pagination from previous response nextCursor"`
 }
 
@@ -57,7 +57,7 @@ func getAutomateEntryHandler(
 
 		limit := input.Limit
 		if limit <= 0 {
-			limit = 10
+			limit = 20
 		}
 		if limit > 100 {
 			limit = 100

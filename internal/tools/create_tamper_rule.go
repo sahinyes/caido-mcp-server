@@ -57,7 +57,7 @@ type CreateTamperRuleInput struct {
 	Match        string   `json:"match,omitempty" jsonschema:"Regex pattern to match"`
 	Replace      string   `json:"replace,omitempty" jsonschema:"Replacement string"`
 	Condition    *string  `json:"condition,omitempty" jsonschema:"HTTPQL filter condition"`
-	Sources      []string `json:"sources,omitempty" jsonschema:"Traffic sources: INTERCEPT REPLAY AUTOMATE IMPORT PLUGIN WORKFLOW SAMPLE"`
+	Sources      []string `json:"sources,omitempty" jsonschema:"Traffic sources: INTERCEPT AUTOMATE (only these two are supported by Caido)"`
 }
 
 // CreateTamperRuleOutput is the output of the create_tamper_rule tool
@@ -95,6 +95,11 @@ func createTamperRuleHandler(
 
 		sources := make([]gen.Source, 0, len(input.Sources))
 		for _, s := range input.Sources {
+			if s != "INTERCEPT" && s != "AUTOMATE" {
+				return nil, CreateTamperRuleOutput{}, fmt.Errorf(
+					"invalid source %q: only INTERCEPT and AUTOMATE are supported", s,
+				)
+			}
 			sources = append(sources, gen.Source(s))
 		}
 

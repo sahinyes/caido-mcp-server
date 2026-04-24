@@ -40,9 +40,18 @@ func selectProjectHandler(
 		}
 
 		payload := resp.SelectProject
-		if payload.Error != nil || payload.CurrentProject == nil {
+		if payload.Error != nil {
+			typename := "unknown"
+			if tn := (*payload.Error).GetTypename(); tn != nil {
+				typename = *tn
+			}
 			return nil, SelectProjectOutput{}, fmt.Errorf(
-				"failed to select project",
+				"select project failed: %s", typename,
+			)
+		}
+		if payload.CurrentProject == nil {
+			return nil, SelectProjectOutput{}, fmt.Errorf(
+				"select project returned no current project",
 			)
 		}
 

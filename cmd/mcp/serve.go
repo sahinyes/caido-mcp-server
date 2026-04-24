@@ -91,12 +91,14 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// HTTP History
 	tools.RegisterListRequestsTool(server, client)
 	tools.RegisterGetRequestTool(server, client)
+	tools.RegisterSearchRequestsTool(server, client)
 
 	// Automate (Fuzzing)
 	tools.RegisterListAutomateSessionsTool(server, client)
 	tools.RegisterGetAutomateSessionTool(server, client)
 	tools.RegisterGetAutomateEntryTool(server, client)
 	tools.RegisterAutomateTaskControlTool(server, client)
+	tools.RegisterStartAutomateTool(server, client)
 
 	// Replay (Send Requests)
 	tools.RegisterSendRequestTool(server, client)
@@ -105,6 +107,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	tools.RegisterListReplaySessionsTool(server, client)
 	tools.RegisterGetReplayEntryTool(server, client)
 	tools.RegisterCreateReplaySessionTool(server, client)
+	tools.RegisterReplayRequestTool(server, client)
 
 	// Findings
 	tools.RegisterListFindingsTool(server, client)
@@ -112,6 +115,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	tools.RegisterDeleteFindingsTool(server, client)
 	tools.RegisterExportFindingsTool(server, client)
 	tools.RegisterUpdateFindingTool(server, client)
+	tools.RegisterGetFindingTool(server, client)
 
 	// Sitemap
 	tools.RegisterGetSitemapTool(server, client)
@@ -119,6 +123,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Scopes
 	tools.RegisterListScopesTool(server, client)
 	tools.RegisterCreateScopeTool(server, client)
+	tools.RegisterCheckScopeTool(server, client)
+
+	// Diff & Export
+	tools.RegisterDiffRequestsTool(server, client)
+	tools.RegisterExportCurlTool(server, client)
 
 	// Projects
 	tools.RegisterListProjectsTool(server, client)

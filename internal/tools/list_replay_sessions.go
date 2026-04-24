@@ -20,6 +20,7 @@ type ReplaySessionSummary struct {
 // ListReplaySessionsOutput is the output of the list_replay_sessions tool
 type ListReplaySessionsOutput struct {
 	Sessions []ReplaySessionSummary `json:"sessions"`
+	Total    int                    `json:"total"`
 }
 
 // listReplaySessionsHandler creates the handler function
@@ -41,6 +42,7 @@ func listReplaySessionsHandler(
 			Sessions: make(
 				[]ReplaySessionSummary, 0, len(conn.Edges),
 			),
+			Total: conn.Count.Value,
 		}
 
 		for _, edge := range conn.Edges {

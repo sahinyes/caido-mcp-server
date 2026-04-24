@@ -12,9 +12,10 @@ import (
 
 // ListInterceptEntriesInput is the input for the tool
 type ListInterceptEntriesInput struct {
-	Limit  int    `json:"limit,omitempty" jsonschema:"Maximum entries to return (default 20, max 100)"`
-	After  string `json:"after,omitempty" jsonschema:"Cursor for pagination"`
-	Filter string `json:"filter,omitempty" jsonschema:"HTTPQL filter query"`
+	Limit    int    `json:"limit,omitempty" jsonschema:"Maximum entries to return (default 20, max 100)"`
+	After    string `json:"after,omitempty" jsonschema:"Cursor for pagination"`
+	Filter   string `json:"filter,omitempty" jsonschema:"HTTPQL filter query"`
+	Host     string `json:"host,omitempty" jsonschema:"Filter by exact host (e.g. api.example.com)"`
 }
 
 // InterceptEntrySummary is a minimal intercept entry
@@ -86,6 +87,9 @@ func listInterceptEntriesHandler(
 		for _, edge := range conn.Edges {
 			e := edge.Node
 			r := e.Request
+			if input.Host != "" && r.Host != input.Host {
+				continue
+			}
 			summary := InterceptEntrySummary{
 				ID:        e.Id,
 				RequestID: r.Id,

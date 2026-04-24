@@ -21,6 +21,7 @@ type AutomateSessionSummary struct {
 // ListAutomateSessionsOutput is the output of the list_automate_sessions tool
 type ListAutomateSessionsOutput struct {
 	Sessions []AutomateSessionSummary `json:"sessions"`
+	Total    int                      `json:"total"`
 }
 
 // listAutomateSessionsHandler creates the handler function
@@ -42,6 +43,7 @@ func listAutomateSessionsHandler(
 			Sessions: make(
 				[]AutomateSessionSummary, 0, len(conn.Edges),
 			),
+			Total: conn.Count.Value,
 		}
 
 		for _, edge := range conn.Edges {

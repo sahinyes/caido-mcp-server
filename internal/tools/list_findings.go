@@ -31,8 +31,9 @@ type FindingSummary struct {
 // ListFindingsOutput is the output of the list_findings tool
 type ListFindingsOutput struct {
 	Findings   []FindingSummary `json:"findings"`
-	HasMore    bool             `json:"hasMore"`
+	HasMore    bool             `json:"hasMore,omitempty"`
 	NextCursor string           `json:"nextCursor,omitempty"`
+	Total      int              `json:"total"`
 }
 
 // listFindingsHandler creates the handler function
@@ -74,6 +75,7 @@ func listFindingsHandler(
 			Findings: make(
 				[]FindingSummary, 0, len(conn.Edges),
 			),
+			Total: conn.Count.Value,
 		}
 
 		if conn.PageInfo.HasNextPage {

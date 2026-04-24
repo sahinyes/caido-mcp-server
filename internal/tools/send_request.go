@@ -16,25 +16,27 @@ import (
 
 // SendRequestInput is the input for the send_request tool
 type SendRequestInput struct {
-	Raw        string `json:"raw" jsonschema:"required,Raw HTTP request including headers and body"`
-	Host       string `json:"host,omitempty" jsonschema:"Target host (overrides Host header)"`
-	Port       int    `json:"port,omitempty" jsonschema:"Target port (default based on TLS)"`
-	TLS        *bool  `json:"tls,omitempty" jsonschema:"Use HTTPS (default true)"`
-	SessionID  string `json:"sessionId,omitempty" jsonschema:"Replay session ID (optional)"`
-	BodyLimit  int    `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit (default 2000)"`
-	BodyOffset int    `json:"bodyOffset,omitempty" jsonschema:"Response body byte offset (default 0)"`
+	Raw              string `json:"raw" jsonschema:"required,Raw HTTP request including headers and body"`
+	Host             string `json:"host,omitempty" jsonschema:"Target host (overrides Host header)"`
+	Port             int    `json:"port,omitempty" jsonschema:"Target port (default based on TLS)"`
+	TLS              *bool  `json:"tls,omitempty" jsonschema:"Use HTTPS (default true)"`
+	SessionID        string `json:"sessionId,omitempty" jsonschema:"Replay session ID (optional)"`
+	BodyLimit        int    `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit (default 2000)"`
+	BodyOffset       int    `json:"bodyOffset,omitempty" jsonschema:"Response body byte offset (default 0)"`
+	FollowRedirects  *bool  `json:"followRedirects,omitempty" jsonschema:"Follow HTTP redirects (default false — returns 30x directly)"`
+	SSLVerify        *bool  `json:"sslVerify,omitempty" jsonschema:"Verify TLS certificate (default true)"`
 }
 
 // SendRequestOutput is the output of the send_request tool
 type SendRequestOutput struct {
-	RequestID   string                  `json:"requestId,omitempty"`
-	EntryID     string                  `json:"entryId,omitempty"`
-	SessionID   string                  `json:"sessionId"`
-	StatusCode  int                     `json:"statusCode,omitempty"`
-	RoundtripMs int                     `json:"roundtripMs,omitempty"`
-	Request     *httputil.ParsedMessage `json:"request,omitempty"`
-	Response    *httputil.ParsedMessage `json:"response,omitempty"`
-	Error       string                  `json:"error,omitempty"`
+	RequestID  string                  `json:"requestId,omitempty"`
+	EntryID    string                  `json:"entryId,omitempty"`
+	SessionID  string                  `json:"sessionId"`
+	StatusCode int                     `json:"statusCode,omitempty"`
+	ElapsedMs  int                     `json:"elapsed_ms,omitempty"`
+	Request    *httputil.ParsedMessage `json:"request,omitempty"`
+	Response   *httputil.ParsedMessage `json:"response,omitempty"`
+	Error      string                  `json:"error,omitempty"`
 }
 
 // isTaskInProgress checks whether the error from
@@ -206,7 +208,7 @@ func sendRequestHandler(
 			if entry.Request.Response != nil {
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
-				output.RoundtripMs = resp.RoundtripTime
+				output.ElapsedMs = resp.RoundtripTime
 				output.Response = httputil.ParseBase64(
 					resp.Raw, true, true,
 					input.BodyOffset, bodyLimit,

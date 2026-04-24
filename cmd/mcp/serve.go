@@ -94,15 +94,18 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Replay (Send Requests)
 	tools.RegisterSendRequestTool(server, client)
+	tools.RegisterTimeRequestTool(server, client)
 	tools.RegisterBatchSendTool(server, client)
 	tools.RegisterListReplaySessionsTool(server, client)
 	tools.RegisterGetReplayEntryTool(server, client)
+	tools.RegisterCreateReplaySessionTool(server, client)
 
 	// Findings
 	tools.RegisterListFindingsTool(server, client)
 	tools.RegisterCreateFindingTool(server, client)
 	tools.RegisterDeleteFindingsTool(server, client)
 	tools.RegisterExportFindingsTool(server, client)
+	tools.RegisterUpdateFindingTool(server, client)
 
 	// Sitemap
 	tools.RegisterGetSitemapTool(server, client)
@@ -114,6 +117,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Projects
 	tools.RegisterListProjectsTool(server, client)
 	tools.RegisterSelectProjectTool(server, client)
+	tools.RegisterCreateProjectTool(server, client)
 
 	// Workflows
 	tools.RegisterListWorkflowsTool(server, client)
@@ -137,8 +141,12 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Tamper (Match & Replace)
 	tools.RegisterListTamperRulesTool(server, client)
 	tools.RegisterCreateTamperRuleTool(server, client)
+	tools.RegisterUpdateTamperRuleTool(server, client)
 	tools.RegisterToggleTamperRuleTool(server, client)
 	tools.RegisterDeleteTamperRuleTool(server, client)
+
+	// Program Setup
+	tools.RegisterSetupProgramTool(server, client)
 
 	// Filters
 	tools.RegisterListFiltersTool(server, client)

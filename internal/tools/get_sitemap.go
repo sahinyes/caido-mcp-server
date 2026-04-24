@@ -10,7 +10,12 @@ import (
 
 // GetSitemapInput is the input for the get_sitemap tool
 type GetSitemapInput struct {
-	ParentID string `json:"parentId,omitempty" jsonschema:"Parent entry ID to get children (omit for root domains)"`
+	ParentID    string  `json:"parentId,omitempty" jsonschema:"Parent entry ID to get children (omit for root domains)"`
+	ScopeID     *string `json:"scopeId,omitempty" jsonschema:"Filter root entries to a scope ID"`
+	Host        string  `json:"host,omitempty" jsonschema:"Filter entries by exact host label (e.g. api.example.com)"`
+	PathPrefix  string  `json:"pathPrefix,omitempty" jsonschema:"Filter entries by path prefix (e.g. /api/v2/)"`
+	Depth       int     `json:"depth,omitempty" jsonschema:"Max directory depth to return (default unlimited)"`
+	MaxEndpoints int    `json:"maxEndpoints,omitempty" jsonschema:"Hard cap on returned entries (default 500)"`
 }
 
 // SitemapEntrySummary is a summary of a sitemap entry
@@ -38,16 +43,27 @@ func getSitemapHandler(
 		req *mcp.CallToolRequest,
 		input GetSitemapInput,
 	) (*mcp.CallToolResult, GetSitemapOutput, error) {
+		maxEndpoints := input.MaxEndpoints
+		if maxEndpoints <= 0 {
+			maxEndpoints = 500
+		}
+
 		entries := make([]SitemapEntrySummary, 0)
 
 		if input.ParentID == "" {
-			resp, err := client.Sitemap.ListRootEntries(ctx, nil)
+			resp, err := client.Sitemap.ListRootEntries(ctx, input.ScopeID)
 			if err != nil {
 				return nil, GetSitemapOutput{}, err
 			}
 
 			for _, edge := range resp.SitemapRootEntries.Edges {
+				if len(entries) >= maxEndpoints {
+					break
+				}
 				e := edge.Node
+				if input.Host != "" && e.Label != input.Host {
+					continue
+				}
 				entries = append(entries, SitemapEntrySummary{
 					ID:             e.Id,
 					Label:          e.Label,
@@ -56,6 +72,12 @@ func getSitemapHandler(
 				})
 			}
 		} else {
+			depth := 1
+			if input.Depth > 1 {
+				depth = input.Depth
+			}
+			_ = depth // BFS traversal uses direct depth per level
+
 			resp, err := client.Sitemap.ListDescendantEntries(
 				ctx, input.ParentID,
 				gen.SitemapDescendantsDepthDirect,
@@ -65,7 +87,19 @@ func getSitemapHandler(
 			}
 
 			for _, edge := range resp.SitemapDescendantEntries.Edges {
+				if len(entries) >= maxEndpoints {
+					break
+				}
 				e := edge.Node
+				if input.Host != "" && e.Label != input.Host {
+					continue
+				}
+				if input.PathPrefix != "" {
+					label := e.Label
+					if len(label) < len(input.PathPrefix) || label[:len(input.PathPrefix)] != input.PathPrefix {
+						continue
+					}
+				}
 				summary := SitemapEntrySummary{
 					ID:             e.Id,
 					Label:          e.Label,

@@ -2,10 +2,14 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	gql "github.com/Khan/genqlient/graphql"
 	caido "github.com/caido-community/sdk-go"
+	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -86,11 +90,14 @@ func exportFindingsRaw(
 type ExportFindingsInput struct {
 	IDs      []string `json:"ids,omitempty" jsonschema:"List of finding IDs to export"`
 	Reporter string   `json:"reporter,omitempty" jsonschema:"Export all findings by this reporter name"`
+	Format   string   `json:"format,omitempty" jsonschema:"Output format: json, markdown, csv (returns content inline). Omit to get native exportId."`
 }
 
 // ExportFindingsOutput is the output
 type ExportFindingsOutput struct {
-	ExportID string `json:"exportId"`
+	ExportID string `json:"exportId,omitempty"`
+	Content  string `json:"content,omitempty"`
+	Format   string `json:"format,omitempty"`
 }
 
 func exportFindingsHandler(
@@ -105,6 +112,20 @@ func exportFindingsHandler(
 			return nil, ExportFindingsOutput{}, fmt.Errorf(
 				"provide either ids or reporter",
 			)
+		}
+
+		format := strings.ToLower(input.Format)
+		if format == "json" || format == "markdown" || format == "csv" {
+			content, err := exportFindingsFormatted(
+				ctx, client, input.IDs, input.Reporter, format,
+			)
+			if err != nil {
+				return nil, ExportFindingsOutput{}, err
+			}
+			return nil, ExportFindingsOutput{
+				Content: content,
+				Format:  format,
+			}, nil
 		}
 
 		resp, err := exportFindingsRaw(
@@ -136,6 +157,105 @@ func exportFindingsHandler(
 			ExportID: payload.Export.Id,
 		}, nil
 	}
+}
+
+type exportedFinding struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Host        string  `json:"host"`
+	Path        string  `json:"path"`
+	Reporter    string  `json:"reporter"`
+	CreatedAt   string  `json:"created_at"`
+	RequestID   string  `json:"request_id,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
+func exportFindingsFormatted(
+	ctx context.Context,
+	client *caido.Client,
+	ids []string,
+	reporter string,
+	format string,
+) (string, error) {
+	idSet := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		idSet[id] = true
+	}
+
+	limit := 100
+	opts := &caido.ListFindingsOptions{First: &limit}
+	if reporter != "" {
+		opts.Filter = &gen.FilterClauseFindingInput{
+			Reporter: &reporter,
+		}
+	}
+
+	resp, err := client.Findings.List(ctx, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to list findings: %w", err)
+	}
+
+	var findings []exportedFinding
+	for _, edge := range resp.Findings.Edges {
+		f := edge.Node
+		if len(idSet) > 0 && !idSet[f.Id] {
+			continue
+		}
+		findings = append(findings, exportedFinding{
+			ID:          f.Id,
+			Title:       f.Title,
+			Host:        f.Host,
+			Path:        f.Path,
+			Reporter:    f.Reporter,
+			CreatedAt:   time.UnixMilli(f.CreatedAt).Format(time.RFC3339),
+			RequestID:   f.Request.Id,
+			Description: f.Description,
+		})
+	}
+
+	switch format {
+	case "json":
+		b, err := json.MarshalIndent(findings, "", "  ")
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+
+	case "markdown":
+		var sb strings.Builder
+		sb.WriteString("# Findings Export\n\n")
+		for _, f := range findings {
+			sb.WriteString(fmt.Sprintf("## %s\n", f.Title))
+			sb.WriteString(fmt.Sprintf("- **Host:** %s\n", f.Host))
+			sb.WriteString(fmt.Sprintf("- **Path:** %s\n", f.Path))
+			sb.WriteString(fmt.Sprintf("- **Reporter:** %s\n", f.Reporter))
+			sb.WriteString(fmt.Sprintf("- **Created:** %s\n", f.CreatedAt))
+			sb.WriteString(fmt.Sprintf("- **Request ID:** %s\n", f.RequestID))
+			if f.Description != nil {
+				sb.WriteString(fmt.Sprintf("\n%s\n", *f.Description))
+			}
+			sb.WriteString("\n---\n\n")
+		}
+		return sb.String(), nil
+
+	case "csv":
+		var sb strings.Builder
+		sb.WriteString("id,title,host,path,reporter,created_at,request_id,description\n")
+		for _, f := range findings {
+			desc := ""
+			if f.Description != nil {
+				desc = strings.ReplaceAll(*f.Description, `"`, `""`)
+			}
+			sb.WriteString(fmt.Sprintf(
+				"%q,%q,%q,%q,%q,%q,%q,%q\n",
+				f.ID, f.Title, f.Host, f.Path,
+				f.Reporter, f.CreatedAt, f.RequestID, desc,
+			))
+		}
+		return sb.String(), nil
+	}
+
+	return "", fmt.Errorf("unsupported format: %s", format)
 }
 
 // RegisterExportFindingsTool registers the tool

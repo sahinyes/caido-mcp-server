@@ -11,16 +11,18 @@ import (
 
 // ListRequestsInput is the input for the list_requests tool
 type ListRequestsInput struct {
-	HTTPQL string `json:"httpql,omitempty" jsonschema:"HTTPQL filter query for filtering requests"`
-	Limit  int    `json:"limit,omitempty" jsonschema:"Maximum number of requests to return (default 20, max 100)"`
-	After  string `json:"after,omitempty" jsonschema:"Cursor for pagination from previous response nextCursor"`
+	HTTPQL    string `json:"httpql,omitempty" jsonschema:"HTTPQL filter query for filtering requests"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum number of requests to return (default 20, max 100)"`
+	After     string `json:"after,omitempty" jsonschema:"Cursor for pagination from previous response nextCursor"`
+	CountOnly *bool  `json:"countOnly,omitempty" jsonschema:"If true, return only total count without request rows"`
 }
 
 // ListRequestsOutput is the output of the list_requests tool
 type ListRequestsOutput struct {
-	Requests   []RequestSummary `json:"requests"`
-	HasMore    bool             `json:"hasMore"`
+	Requests   []RequestSummary `json:"requests,omitempty"`
+	HasMore    bool             `json:"hasMore,omitempty"`
 	NextCursor string           `json:"nextCursor,omitempty"`
+	Total      int              `json:"total"`
 }
 
 // RequestSummary is a minimal representation of a request
@@ -73,9 +75,14 @@ func listRequestsHandler(
 
 		conn := resp.Requests
 		output := ListRequestsOutput{
-			Requests: make([]RequestSummary, 0, len(conn.Edges)),
+			Total: conn.Count.Value,
 		}
 
+		if input.CountOnly != nil && *input.CountOnly {
+			return nil, output, nil
+		}
+
+		output.Requests = make([]RequestSummary, 0, len(conn.Edges))
 		for _, edge := range conn.Edges {
 			r := edge.Node
 			summary := RequestSummary{

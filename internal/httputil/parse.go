@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -79,7 +80,7 @@ func ParseRaw(
 				if idx := strings.Index(line, ":"); idx > 0 {
 					name := strings.TrimSpace(line[:idx])
 					value := strings.TrimSpace(line[idx+1:])
-					if sensitiveHeaders[strings.ToLower(name)] {
+					if sensitiveHeaders[strings.ToLower(name)] && os.Getenv("CAIDO_DISABLE_REDACTION") != "true" {
 						value = "[REDACTED]"
 					}
 					result.Headers = append(result.Headers, Header{

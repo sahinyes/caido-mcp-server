@@ -69,11 +69,18 @@ func listTamperRulesHandler(
 					sources = append(sources, string(s))
 				}
 
+				var cond *string
+				if r.Condition != nil {
+					if cg, ok := (*r.Condition).(codeGetter); ok {
+						code := cg.GetCode()
+						cond = &code
+					}
+				}
 				col.Rules = append(col.Rules, TamperRuleSummary{
 					ID:        r.Id,
 					Name:      r.Name,
 					Enabled:   enabled,
-					Condition: r.Condition,
+					Condition: cond,
 					Sources:   sources,
 				})
 			}

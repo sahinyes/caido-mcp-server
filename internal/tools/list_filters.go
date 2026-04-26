@@ -23,6 +23,8 @@ type ListFiltersOutput struct {
 	Filters []FilterPresetSummary `json:"filters"`
 }
 
+type codeGetter interface{ GetCode() string }
+
 // listFiltersHandler creates the handler function
 func listFiltersHandler(
 	client *caido.Client,
@@ -45,12 +47,16 @@ func listFiltersHandler(
 		}
 
 		for _, f := range resp.FilterPresets {
+			var clause string
+			if cg, ok := f.Clause.(codeGetter); ok {
+				clause = cg.GetCode()
+			}
 			output.Filters = append(
 				output.Filters, FilterPresetSummary{
 					ID:     f.Id,
 					Name:   f.Name,
 					Alias:  f.Alias,
-					Clause: f.Clause,
+					Clause: clause,
 				},
 			)
 		}

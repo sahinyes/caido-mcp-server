@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -14,6 +16,7 @@ type BatchSendInput struct {
 	Requests    []BatchRequestItem `json:"requests" jsonschema:"required,Array of requests to send in parallel (max 50)"`
 	Concurrency int                `json:"concurrency,omitempty" jsonschema:"Parallel session count (default 5, max 20)"`
 	BodyLimit   int                `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit per request (default 2000)"`
+	SummaryOnly *bool              `json:"summaryOnly,omitempty" jsonschema:"Return compact results (statusCode, location, bodySize, 100-byte preview). Auto-enabled for >20 requests unless explicitly false."`
 }
 
 // BatchRequestItem is a single request in the batch.
@@ -27,8 +30,9 @@ type BatchRequestItem struct {
 
 // BatchSendOutput is the output of the batch_send tool.
 type BatchSendOutput struct {
-	Results []replay.BatchResult `json:"results"`
-	Summary string               `json:"summary"`
+	Results     []replay.BatchResult  `json:"results,omitempty"`
+	Summary     string                `json:"summary"`
+	SummaryMode bool                  `json:"summaryMode,omitempty"`
 }
 
 // batchSendHandler creates the handler function for batch_send.
@@ -85,14 +89,42 @@ func batchSendHandler(
 		if concurrency == 0 {
 			concurrency = 5
 		}
+
+		// Summary mode: auto-enable for >20 requests unless explicitly disabled.
+		summaryMode := (input.SummaryOnly != nil && *input.SummaryOnly) ||
+			(input.SummaryOnly == nil && n > 20)
+
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
-			bodyLimit = 2000
+			if summaryMode {
+				bodyLimit = 100
+			} else {
+				bodyLimit = 2000
+			}
 		}
 
 		results := replay.RunBatch(
 			ctx, client, batchReqs, concurrency, bodyLimit,
 		)
+
+		// In summary mode strip the request echo and excess response headers
+		// to keep the JSON envelope small.
+		if summaryMode {
+			for i := range results {
+				results[i].Request = nil
+				if resp := results[i].Response; resp != nil {
+					// Keep only Location header for redirect detection.
+					var kept []httputil.Header
+					for _, h := range resp.Headers {
+						if strings.EqualFold(h.Name, "location") {
+							kept = append(kept, h)
+							break
+						}
+					}
+					resp.Headers = kept
+				}
+			}
+		}
 
 		// Build summary line.
 		ok, fail := 0, 0
@@ -103,16 +135,18 @@ func batchSendHandler(
 				ok++
 			}
 		}
-		summary := fmt.Sprintf(
-			"%d/%d succeeded", ok, n,
-		)
+		summary := fmt.Sprintf("%d/%d succeeded", ok, n)
 		if fail > 0 {
 			summary += fmt.Sprintf(", %d failed", fail)
 		}
+		if summaryMode {
+			summary += " [summary mode]"
+		}
 
 		return nil, BatchSendOutput{
-			Results: results,
-			Summary: summary,
+			Results:     results,
+			Summary:     summary,
+			SummaryMode: summaryMode,
 		}, nil
 	}
 }

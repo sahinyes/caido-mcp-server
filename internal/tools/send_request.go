@@ -16,15 +16,16 @@ import (
 
 // SendRequestInput is the input for the send_request tool
 type SendRequestInput struct {
-	Raw              string `json:"raw" jsonschema:"required,Raw HTTP request including headers and body"`
-	Host             string `json:"host,omitempty" jsonschema:"Target host (overrides Host header)"`
-	Port             int    `json:"port,omitempty" jsonschema:"Target port (default based on TLS)"`
-	TLS              *bool  `json:"tls,omitempty" jsonschema:"Use HTTPS (default true)"`
-	SessionID        string `json:"sessionId,omitempty" jsonschema:"Replay session ID (optional)"`
-	BodyLimit        int    `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit (default 2000)"`
-	BodyOffset       int    `json:"bodyOffset,omitempty" jsonschema:"Response body byte offset (default 0)"`
-	FollowRedirects  *bool  `json:"followRedirects,omitempty" jsonschema:"Follow HTTP redirects (default false — returns 30x directly)"`
-	SSLVerify        *bool  `json:"sslVerify,omitempty" jsonschema:"Verify TLS certificate (default true)"`
+	Raw             string `json:"raw" jsonschema:"required,Raw HTTP request including headers and body"`
+	Host            string `json:"host,omitempty" jsonschema:"Target host (overrides Host header)"`
+	Port            int    `json:"port,omitempty" jsonschema:"Target port (default based on TLS)"`
+	TLS             *bool  `json:"tls,omitempty" jsonschema:"Use HTTPS (default true)"`
+	SessionID       string `json:"sessionId,omitempty" jsonschema:"Replay session ID (optional)"`
+	BodyLimit       int    `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit (default 2000)"`
+	BodyOffset      int    `json:"bodyOffset,omitempty" jsonschema:"Response body byte offset (default 0)"`
+	FollowRedirects *bool  `json:"followRedirects,omitempty" jsonschema:"Follow HTTP redirects (default false — returns 30x directly)"`
+	SSLVerify       *bool  `json:"sslVerify,omitempty" jsonschema:"Verify TLS certificate (default true)"`
+	NoRequestEcho   bool   `json:"noRequestEcho,omitempty" jsonschema:"Omit the echoed request from output. Use when chunking large bodies to stay within token limits."`
 }
 
 // SendRequestOutput is the output of the send_request tool
@@ -202,9 +203,11 @@ func sendRequestHandler(
 
 		if entry.Request != nil {
 			output.RequestID = entry.Request.Id
-			output.Request = httputil.ParseBase64(
-				entry.Request.Raw, true, false, 0, 0,
-			)
+			if !input.NoRequestEcho {
+				output.Request = httputil.ParseBase64(
+					entry.Request.Raw, true, false, 0, 0,
+				)
+			}
 			if entry.Request.Response != nil {
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
@@ -226,6 +229,6 @@ func RegisterSendRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_send_request",
-		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns entryId for follow-up via get_replay_entry.`,
+		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns entryId for follow-up via get_replay_entry. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
 	}, sendRequestHandler(client))
 }

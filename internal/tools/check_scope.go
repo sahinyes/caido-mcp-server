@@ -123,6 +123,16 @@ func matchScopePattern(pattern, target string) bool {
 		return true
 	}
 
+	// Try matching pattern against just the host segment of the target.
+	// path.Match's * cannot cross '/', so *.example.com won't match
+	// sub.example.com/deep/path without this host-only fallback.
+	if slash := strings.IndexByte(target, '/'); slash > 0 {
+		hostOnly := target[:slash]
+		if matched, err := path.Match(pattern, hostOnly); err == nil && matched {
+			return true
+		}
+	}
+
 	// Try with wildcard suffix to handle "*.example.com" matching "sub.example.com/path"
 	if matched, err := path.Match(pattern+"/*", target); err == nil && matched {
 		return true

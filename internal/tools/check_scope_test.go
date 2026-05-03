@@ -76,3 +76,17 @@ func TestMatchScopePattern_PrefixNoWildcard(t *testing.T) {
 		t.Fatal("prefix pattern should match longer path")
 	}
 }
+
+func TestMatchScopePattern_WildcardSubdomainWithDeepPath(t *testing.T) {
+	// FR#28: *.points.com must match helpdesk.points.com/portal/instructions/customer
+	if !matchScopePattern("*.points.com", "helpdesk.points.com/portal/instructions/customer") {
+		t.Fatal("wildcard subdomain should match host with deep path")
+	}
+}
+
+func TestMatchScopePattern_WildcardSubdomainWithQueryString(t *testing.T) {
+	target := normaliseURL("https://helpdesk.points.com/portal/instructions/customer?next=foo")
+	if !matchScopePattern("*.points.com", target) {
+		t.Fatal("wildcard subdomain should match host with path and query")
+	}
+}

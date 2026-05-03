@@ -108,6 +108,10 @@ func normaliseURL(rawURL string) string {
 // Caido patterns use glob syntax: * matches any sequence within a path segment,
 // a bare * is treated as match-everything.
 func matchScopePattern(pattern, target string) bool {
+	if pattern == "" {
+		return false
+	}
+
 	// Normalise pattern — strip scheme if present
 	if idx := strings.Index(pattern, "://"); idx >= 0 {
 		pattern = pattern[idx+3:]

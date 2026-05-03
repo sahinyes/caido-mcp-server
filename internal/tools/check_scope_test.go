@@ -84,6 +84,15 @@ func TestMatchScopePattern_WildcardSubdomainWithDeepPath(t *testing.T) {
 	}
 }
 
+func TestMatchScopePattern_EmptyPattern_ReturnsFalse(t *testing.T) {
+	if matchScopePattern("", "example.com/path") {
+		t.Fatal("empty pattern must not match anything")
+	}
+	if matchScopePattern("", "") {
+		t.Fatal("empty pattern must not match empty target either")
+	}
+}
+
 func TestMatchScopePattern_WildcardSubdomainWithQueryString(t *testing.T) {
 	target := normaliseURL("https://helpdesk.points.com/portal/instructions/customer?next=foo")
 	if !matchScopePattern("*.points.com", target) {

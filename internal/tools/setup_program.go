@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	gql "github.com/Khan/genqlient/graphql"
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
@@ -50,6 +52,26 @@ func setupProgramHandler(
 		if len(input.ScopeInclude) == 0 {
 			return nil, SetupProgramOutput{}, fmt.Errorf("scopeInclude is required")
 		}
+		scopeInclude := make([]string, len(input.ScopeInclude))
+		for i, p := range input.ScopeInclude {
+			t := strings.TrimSpace(p)
+			if t == "" {
+				return nil, SetupProgramOutput{}, fmt.Errorf(
+					"scopeInclude[%d] must be non-empty", i,
+				)
+			}
+			scopeInclude[i] = t
+		}
+		scopeExclude := make([]string, len(input.ScopeExclude))
+		for i, p := range input.ScopeExclude {
+			t := strings.TrimSpace(p)
+			if t == "" {
+				return nil, SetupProgramOutput{}, fmt.Errorf(
+					"scopeExclude[%d] must be non-empty", i,
+				)
+			}
+			scopeExclude[i] = t
+		}
 		replaceExisting := true
 		if input.ReplaceExisting != nil {
 			replaceExisting = *input.ReplaceExisting
@@ -80,12 +102,8 @@ func setupProgramHandler(
 
 		// Step 3: find or create scope (idempotent)
 		scopeName := setupPrefix + input.ProjectName
-		denylist := input.ScopeExclude
-		if denylist == nil {
-			denylist = []string{}
-		}
 		scopeResult, err := findOrCreateScope(
-			ctx, client, scopeName, input.ScopeInclude, denylist,
+			ctx, client, scopeName, scopeInclude, scopeExclude,
 		)
 		if err != nil {
 			return nil, SetupProgramOutput{}, fmt.Errorf(

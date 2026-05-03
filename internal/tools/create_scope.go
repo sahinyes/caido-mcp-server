@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
@@ -47,15 +48,30 @@ func createScopeHandler(
 				"allowlist exceeds max of 100 entries",
 			)
 		}
-
-		denylist := input.Denylist
-		if denylist == nil {
-			denylist = []string{}
+		allowlist := make([]string, len(input.Allowlist))
+		for i, p := range input.Allowlist {
+			t := strings.TrimSpace(p)
+			if t == "" {
+				return nil, CreateScopeOutput{}, fmt.Errorf(
+					"allowlist[%d] must be non-empty", i,
+				)
+			}
+			allowlist[i] = t
+		}
+		denylist := make([]string, len(input.Denylist))
+		for i, p := range input.Denylist {
+			t := strings.TrimSpace(p)
+			if t == "" {
+				return nil, CreateScopeOutput{}, fmt.Errorf(
+					"denylist[%d] must be non-empty", i,
+				)
+			}
+			denylist[i] = t
 		}
 
 		resp, err := client.Scopes.Create(ctx, &gen.CreateScopeInput{
 			Name:      input.Name,
-			Allowlist: input.Allowlist,
+			Allowlist: allowlist,
 			Denylist:  denylist,
 		})
 		if err != nil {

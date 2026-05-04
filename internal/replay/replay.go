@@ -48,6 +48,16 @@ func ResetDefaultSession(newID string) {
 	sessionMu.Unlock()
 }
 
+func entryIsReady(e *gen.GetReplayEntryReplayEntry) bool {
+	if e == nil {
+		return false
+	}
+	if e.Error != nil && *e.Error != "" {
+		return true
+	}
+	return e.Request != nil && e.Request.Response != nil
+}
+
 func PollForEntry(
 	ctx context.Context,
 	client *caido.Client,
@@ -69,12 +79,8 @@ func PollForEntry(
 				return nil, fmt.Errorf("poll entry: %w", err)
 			}
 			e := entryResp.ReplayEntry
-			if e != nil {
-				hasError := e.Error != nil && *e.Error != ""
-				hasResponse := e.Request != nil && e.Request.Response != nil
-				if hasResponse || hasError {
-					return e, nil
-				}
+			if entryIsReady(e) {
+				return e, nil
 			}
 		}
 		select {

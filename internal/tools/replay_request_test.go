@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -127,5 +128,141 @@ func TestApplyModifications_CRLFSeparator(t *testing.T) {
 
 	if !strings.Contains(result, "\r\n\r\n") {
 		t.Fatalf("missing CRLF header/body separator: %q", result)
+	}
+}
+
+// --- ReplayRequestInput struct shape ---
+
+func TestReplayRequestInput_HasHostPortTLS(t *testing.T) {
+	typ := reflect.TypeOf(ReplayRequestInput{})
+	required := []string{"Host", "Port", "TLS"}
+	fieldSet := make(map[string]bool)
+	for i := range typ.NumField() {
+		fieldSet[typ.Field(i).Name] = true
+	}
+	for _, name := range required {
+		if !fieldSet[name] {
+			t.Errorf("ReplayRequestInput missing field %q", name)
+		}
+	}
+}
+
+func TestReplayRequestInput_HostPortTLS_JSONTags(t *testing.T) {
+	typ := reflect.TypeOf(ReplayRequestInput{})
+	want := map[string]string{
+		"Host": "host,omitempty",
+		"Port": "port,omitempty",
+		"TLS":  "tls,omitempty",
+	}
+	for i := range typ.NumField() {
+		f := typ.Field(i)
+		if expected, ok := want[f.Name]; ok {
+			got := f.Tag.Get("json")
+			if got != expected {
+				t.Errorf("field %s json tag: want %q, got %q", f.Name, expected, got)
+			}
+		}
+	}
+}
+
+// --- applyModifications does NOT touch connection target ---
+
+func TestApplyModifications_HostFieldIgnored(t *testing.T) {
+	// Host/Port/TLS override applies to the TCP connection, not the raw bytes.
+	// applyModifications must not alter the Host header in raw.
+	raw := "GET / HTTP/1.1\r\nHost: original.example.com\r\n\r\n"
+	parsed := parseTestRequest(raw)
+
+	result := applyModifications(parsed, ReplayRequestInput{
+		Host: "override.example.com",
+	})
+
+	if !strings.Contains(result, "Host: original.example.com") {
+		t.Fatalf("applyModifications must preserve original Host header; got: %s", result)
+	}
+	if strings.Contains(result, "override.example.com") {
+		t.Fatalf("applyModifications must not inject override host into raw; got: %s", result)
+	}
+}
+
+func TestApplyModifications_SetHeadersOverridesHostInRaw(t *testing.T) {
+	// Users who want to change the on-wire Host: header use setHeaders
+	raw := "GET / HTTP/1.1\r\nHost: original.example.com\r\n\r\n"
+	parsed := parseTestRequest(raw)
+
+	result := applyModifications(parsed, ReplayRequestInput{
+		SetHeaders: map[string]string{"Host": "spoofed.example.com"},
+	})
+
+	if strings.Contains(result, "original.example.com") {
+		t.Fatalf("setHeaders Host replacement failed; original still present: %s", result)
+	}
+	if !strings.Contains(result, "spoofed.example.com") {
+		t.Fatalf("setHeaders Host replacement failed; spoofed value missing: %s", result)
+	}
+}
+
+func TestApplyModifications_AllOperationsCombined(t *testing.T) {
+	raw := "GET /old HTTP/1.1\r\nHost: example.com\r\nX-Old: remove\r\nKeep: yes\r\n\r\nbody"
+	parsed := parseTestRequest(raw)
+	newBody := "newbody"
+
+	result := applyModifications(parsed, ReplayRequestInput{
+		Method:        "post",
+		Path:          "/new",
+		RemoveHeaders: []string{"X-Old"},
+		SetHeaders:    map[string]string{"X-New": "added"},
+		Body:          &newBody,
+	})
+
+	checks := []struct {
+		desc    string
+		present bool
+		needle  string
+	}{
+		{"POST method", true, "POST /new HTTP/1.1"},
+		{"new header", true, "X-New: added"},
+		{"kept header", true, "Keep: yes"},
+		{"new body", true, "newbody"},
+		{"removed header absent", false, "X-Old"},
+		{"original body absent", false, "body\r\n"},
+	}
+	for _, c := range checks {
+		has := strings.Contains(result, c.needle)
+		if c.present && !has {
+			t.Errorf("[%s] expected %q in result: %s", c.desc, c.needle, result)
+		}
+		if !c.present && has {
+			t.Errorf("[%s] unexpected %q in result: %s", c.desc, c.needle, result)
+		}
+	}
+}
+
+// --- benchmarks ---
+
+func BenchmarkApplyModifications_NoChanges(b *testing.B) {
+	raw := "GET /path HTTP/1.1\r\nHost: example.com\r\nAccept: */*\r\nContent-Length: 0\r\n\r\n"
+	parsed := httputil.ParseRaw([]byte(raw), true, true, 0, 0)
+	input := ReplayRequestInput{}
+	b.ResetTimer()
+	for b.Loop() {
+		applyModifications(parsed, input)
+	}
+}
+
+func BenchmarkApplyModifications_WithOverrides(b *testing.B) {
+	raw := "GET /path HTTP/1.1\r\nHost: example.com\r\nAuthorization: Bearer old\r\nX-Remove: yes\r\n\r\nbody"
+	parsed := httputil.ParseRaw([]byte(raw), true, true, 0, 0)
+	newBody := `{"data":"new"}`
+	input := ReplayRequestInput{
+		Method:        "post",
+		Path:          "/new/path",
+		SetHeaders:    map[string]string{"Authorization": "Bearer new", "X-Added": "yes"},
+		RemoveHeaders: []string{"X-Remove"},
+		Body:          &newBody,
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		applyModifications(parsed, input)
 	}
 }

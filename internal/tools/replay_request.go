@@ -35,7 +35,8 @@ type ReplayRequestOutput struct {
 	EntryID     string                  `json:"entryId,omitempty"`
 	SessionID   string                  `json:"sessionId"`
 	StatusCode  int                     `json:"statusCode,omitempty"`
-	RoundtripMs int                     `json:"roundtripMs,omitempty"`
+	ElapsedMs   int                     `json:"elapsed_ms,omitempty"`
+	RoundtripMs int                     `json:"roundtripMs,omitempty"` // deprecated: use elapsed_ms
 	Request     *httputil.ParsedMessage `json:"request,omitempty"`
 	Response    *httputil.ParsedMessage `json:"response,omitempty"`
 	Error       string                  `json:"error,omitempty"`
@@ -186,7 +187,8 @@ func replayRequestHandler(
 			if entry.Request.Response != nil {
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
-				output.RoundtripMs = resp.RoundtripTime
+				output.ElapsedMs = resp.RoundtripTime
+			output.RoundtripMs = resp.RoundtripTime
 				output.Response = httputil.ParseBase64(
 					resp.Raw, true, true, input.BodyOffset, bodyLimit,
 				)

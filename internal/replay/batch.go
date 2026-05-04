@@ -184,6 +184,10 @@ func executeSingle(
 		return result
 	}
 
+	if entry.Error != nil && *entry.Error != "" {
+		result.Error = *entry.Error
+	}
+
 	if entry.Request != nil {
 		result.Request = httputil.ParseBase64(
 			entry.Request.Raw, true, false, 0, 0,

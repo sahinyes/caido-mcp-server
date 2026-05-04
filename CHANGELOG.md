@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- `caido_replay_request` now accepts `host`, `port`, and `tls` override fields to change the TCP connection target independently of the on-wire `Host` header (FR#2).
+
+### Fixed
+- `caido_replay_request`: transport errors from the Caido replay engine (e.g. connection reset, TLS failure) are now surfaced in the `error` field instead of timing out silently (FR#6 / batch parity).
+- `caido_send_request`: same transport-error surfacing via the `error` field.
+- `caido_batch_send` (DETAILED mode): transport errors from the replay engine are now captured in each result's `error` field; `statusCode` and `response` correctly remain absent rather than showing misleading defaults (FR#6).
+- `caido_replay_request`: session-busy detection now uses the same typed check as `caido_send_request` instead of a string match (reliability fix).
+- `internal/replay`: poll loop exits promptly on engine-reported errors, preventing unnecessary 15 s timeout on blocked connections.
+
+### Removed
+- `caido_send_request`: removed `followRedirects` and `sslVerify` parameters — the Caido replay engine does not support these options and they were no-ops. Redirects return 3xx directly; TLS verification is enforced by the engine.
+
 ## [1.5.0] - 2026-04-09
 
 ### Added

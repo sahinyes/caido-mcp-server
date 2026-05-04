@@ -69,10 +69,12 @@ func PollForEntry(
 				return nil, fmt.Errorf("poll entry: %w", err)
 			}
 			e := entryResp.ReplayEntry
-			if e != nil && e.Request != nil &&
-				(e.Request.Response != nil ||
-					(e.Error != nil && *e.Error != "")) {
-				return e, nil
+			if e != nil {
+				hasError := e.Error != nil && *e.Error != ""
+				hasResponse := e.Request != nil && e.Request.Response != nil
+				if hasResponse || hasError {
+					return e, nil
+				}
 			}
 		}
 		select {

@@ -92,6 +92,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	tools.RegisterListRequestsTool(server, client)
 	tools.RegisterGetRequestTool(server, client)
 	tools.RegisterSearchRequestsTool(server, client)
+	tools.RegisterGetHttpqlSchemaTool(server, client)
 
 	// Automate (Fuzzing)
 	tools.RegisterListAutomateSessionsTool(server, client)
@@ -99,6 +100,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	tools.RegisterGetAutomateEntryTool(server, client)
 	tools.RegisterAutomateTaskControlTool(server, client)
 	tools.RegisterStartAutomateTool(server, client)
+	tools.RegisterCreateAutomateSessionTool(server, client)
 
 	// Replay (Send Requests)
 	tools.RegisterSendRequestTool(server, client)

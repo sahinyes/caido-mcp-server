@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `caido_replay_request` now accepts `host`, `port`, and `tls` override fields to change the TCP connection target independently of the on-wire `Host` header (FR#2).
+- **`caido_create_automate_session`** — create an automate (fuzzing) session, optionally seeded from an existing request ID. Returns `sessionId` for use with `caido_start_automate` or `caido_automate_task_control` (FR#4).
+- **`caido_get_httpql_schema`** — returns the HTTPQL query language reference: fields, operators, combinators, and usage examples. Use before writing `httpql` filters for `list_requests`, `search_requests`, `list_intercept_entries`, or tamper rule conditions (consolidated FR #5).
+
+### Changed
+- `caido_replay_request`: response now includes `elapsed_ms` field (milliseconds, server-reported) matching `caido_send_request` output convention. `roundtripMs` is retained as a deprecated alias and will be removed in a future release.
 
 ### Fixed
 - `caido_replay_request`: transport errors from the Caido replay engine (e.g. connection reset, TLS failure) are now surfaced in the `error` field instead of timing out silently (FR#6 / batch parity).

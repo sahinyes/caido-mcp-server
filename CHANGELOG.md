@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - `caido_batch_send` (DETAILED mode): transport errors from the replay engine are now captured in each result's `error` field; `statusCode` and `response` correctly remain absent rather than showing misleading defaults (FR#6).
 - `caido_replay_request`: session-busy detection now uses the same typed check as `caido_send_request` instead of a string match (reliability fix).
 - `internal/replay`: poll loop exits promptly on engine-reported errors, preventing unnecessary 15 s timeout on blocked connections.
+- `caido_setup_program`: tamper rules are now automatically enabled after creation and update. The Caido API creates rules in a disabled state by default; an explicit `toggleTamperRule` call is now made immediately after each create/update (FR#5).
+- `caido_create_tamper_rule`: same fix — rules are enabled on creation.
 
 ### Removed
 - `caido_send_request`: removed `followRedirects` and `sslVerify` parameters — the Caido replay engine does not support these options and they were no-ops. Redirects return 3xx directly; TLS verification is enforced by the engine.

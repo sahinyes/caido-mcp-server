@@ -146,6 +146,12 @@ func createTamperRuleHandler(
 			)
 		}
 
+		if err := enableTamperRule(ctx, client, payload.Rule.Id); err != nil {
+			return nil, CreateTamperRuleOutput{}, fmt.Errorf(
+				"created but failed to enable tamper rule: %w", err,
+			)
+		}
+
 		return nil, CreateTamperRuleOutput{
 			ID:   payload.Rule.Id,
 			Name: payload.Rule.Name,

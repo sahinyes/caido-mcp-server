@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - `caido_replay_request`: response now includes `elapsed_ms` field (milliseconds, server-reported) matching `caido_send_request` output convention. `roundtripMs` is retained as a deprecated alias and will be removed in a future release.
 
 ### Fixed
+- **Sleep/wake self-heal**: a `retryTransport` layer in the SDK now retries connection-level failures (ECONNRESET, ECONNREFUSED, EPIPE, EOF, dial/read/write errors) once after 200 ms. After macOS sleep/wake, the first Caido API call transparently recovers instead of returning a connection error. Root cause (Caido daemon SQLite reconnect) is upstream; this is a client-side palliative (FR fr-1777836025988).
 - `caido_replay_request`: transport errors from the Caido replay engine (e.g. connection reset, TLS failure) are now surfaced in the `error` field instead of timing out silently (FR#6 / batch parity).
 - `caido_send_request`: same transport-error surfacing via the `error` field.
 - `caido_batch_send` (DETAILED mode): transport errors from the replay engine are now captured in each result's `error` field; `statusCode` and `response` correctly remain absent rather than showing misleading defaults (FR#6).

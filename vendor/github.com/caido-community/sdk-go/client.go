@@ -90,7 +90,7 @@ func NewClient(opts Options) (*Client, error) {
 
 	httpClient := &http.Client{
 		Transport: &authTransport{
-			base: http.DefaultTransport,
+			base: &retryTransport{base: http.DefaultTransport},
 			auth: state,
 		},
 	}

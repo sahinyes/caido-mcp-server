@@ -289,6 +289,11 @@ func applyHeaderTamperRule(
 						if err != nil {
 							return SetupProgramStepResult{}, err
 						}
+						if err := enableTamperRule(ctx, client, updated.ID); err != nil {
+							return SetupProgramStepResult{}, fmt.Errorf(
+								"updated but failed to enable tamper rule: %w", err,
+							)
+						}
 						return SetupProgramStepResult{
 							ID:      updated.ID,
 							Name:    updated.Name,
@@ -336,11 +341,27 @@ func applyHeaderTamperRule(
 			"create tamper rule returned no rule",
 		)
 	}
+	if err := enableTamperRule(ctx, client, payload.Rule.Id); err != nil {
+		return SetupProgramStepResult{}, fmt.Errorf(
+			"created but failed to enable tamper rule: %w", err,
+		)
+	}
 	return SetupProgramStepResult{
 		ID:      payload.Rule.Id,
 		Name:    payload.Rule.Name,
 		Created: true,
 	}, nil
+}
+
+func enableTamperRule(ctx context.Context, client *caido.Client, id string) error {
+	resp, err := client.Tamper.ToggleRule(ctx, id, true)
+	if err != nil {
+		return err
+	}
+	if resp.ToggleTamperRule.Error != nil {
+		return fmt.Errorf("toggle returned error")
+	}
+	return nil
 }
 
 func rawUpdateTamperRule(

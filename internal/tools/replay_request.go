@@ -16,6 +16,9 @@ import (
 // ReplayRequestInput is the input for the replay_request tool
 type ReplayRequestInput struct {
 	ID            string            `json:"id" jsonschema:"required,Request ID to clone and replay"`
+	Host          string            `json:"host,omitempty" jsonschema:"Override target host (default: original request host)"`
+	Port          int               `json:"port,omitempty" jsonschema:"Override target port (default: original)"`
+	TLS           *bool             `json:"tls,omitempty" jsonschema:"Override TLS (default: original)"`
 	SetHeaders    map[string]string `json:"setHeaders,omitempty" jsonschema:"Headers to add or replace (name -> value)"`
 	RemoveHeaders []string          `json:"removeHeaders,omitempty" jsonschema:"Header names to remove"`
 	Body          *string           `json:"body,omitempty" jsonschema:"Replace request body with this value"`
@@ -97,11 +100,24 @@ func replayRequestHandler(
 
 		rawBase64 := base64.StdEncoding.EncodeToString([]byte(modifiedRaw))
 
+		host := orig.Host
+		if input.Host != "" {
+			host = input.Host
+		}
+		port := orig.Port
+		if input.Port != 0 {
+			port = input.Port
+		}
+		useTLS := orig.IsTls
+		if input.TLS != nil {
+			useTLS = *input.TLS
+		}
+
 		taskInput := &gen.StartReplayTaskInput{
 			Connection: gen.ConnectionInfoInput{
-				Host:  orig.Host,
-				Port:  orig.Port,
-				IsTLS: orig.IsTls,
+				Host:  host,
+				Port:  port,
+				IsTLS: useTLS,
 			},
 			Raw: rawBase64,
 			Settings: gen.ReplayEntrySettingsInput{
@@ -111,31 +127,25 @@ func replayRequestHandler(
 			},
 		}
 
-		_, err = client.Replay.SendRequest(ctx, sessionID, taskInput)
-		if err != nil {
-			if strings.Contains(err.Error(), "TaskInProgressUserError") {
-				newSess, createErr := client.Replay.CreateSession(
-					ctx, &gen.CreateReplaySessionInput{},
-				)
-				if createErr != nil {
-					return nil, ReplayRequestOutput{}, fmt.Errorf(
-						"failed to create fallback session: %w", createErr,
-					)
-				}
-				sessionID = newSess.CreateReplaySession.Session.Id
-				if input.SessionID == "" {
-					replay.ResetDefaultSession(sessionID)
-				}
-				previousEntryID = ""
-				_, err = client.Replay.SendRequest(ctx, sessionID, taskInput)
-				if err != nil {
-					return nil, ReplayRequestOutput{}, fmt.Errorf(
-						"failed to replay request (retry): %w", err,
-					)
-				}
-			} else {
+		taskResp, err := client.Replay.SendRequest(ctx, sessionID, taskInput)
+		if err != nil || isTaskInProgress(taskResp) {
+			newSess, createErr := client.Replay.CreateSession(
+				ctx, &gen.CreateReplaySessionInput{},
+			)
+			if createErr != nil {
 				return nil, ReplayRequestOutput{}, fmt.Errorf(
-					"failed to replay request: %w", err,
+					"failed to create fallback session: %w", createErr,
+				)
+			}
+			sessionID = newSess.CreateReplaySession.Session.Id
+			if input.SessionID == "" {
+				replay.ResetDefaultSession(sessionID)
+			}
+			previousEntryID = ""
+			_, err = client.Replay.SendRequest(ctx, sessionID, taskInput)
+			if err != nil {
+				return nil, ReplayRequestOutput{}, fmt.Errorf(
+					"failed to replay request (retry): %w", err,
 				)
 			}
 		}
@@ -158,6 +168,10 @@ func replayRequestHandler(
 		}
 
 		output.EntryID = entry.Id
+
+		if entry.Error != nil && *entry.Error != "" {
+			output.Error = *entry.Error
+		}
 
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
@@ -280,6 +294,6 @@ func RegisterReplayRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_replay_request",
-		Description: `Clone a captured request and resend with modifications. Supports setHeaders (add/replace), removeHeaders, body (replace), method (override), path (override). Returns response inline. Params: id (request ID), setHeaders, removeHeaders, body, method, path, sessionId, bodyLimit, bodyOffset.`,
+		Description: `Clone a captured request by ID and resend with modifications. Fetches the original request fresh on every call. Supports host/port/tls override (changes TCP target, not just Host header), setHeaders (add/replace), removeHeaders, body (replace), method, path. sessionId controls the replay session pool — original request is always re-fetched from Caido. Returns response inline.`,
 	}, replayRequestHandler(client))
 }

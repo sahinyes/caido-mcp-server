@@ -23,8 +23,6 @@ type SendRequestInput struct {
 	SessionID       string `json:"sessionId,omitempty" jsonschema:"Replay session ID (optional)"`
 	BodyLimit       int    `json:"bodyLimit,omitempty" jsonschema:"Response body byte limit (default 2000)"`
 	BodyOffset      int    `json:"bodyOffset,omitempty" jsonschema:"Response body byte offset (default 0)"`
-	FollowRedirects *bool  `json:"followRedirects,omitempty" jsonschema:"Follow HTTP redirects (default false — returns 30x directly)"`
-	SSLVerify       *bool  `json:"sslVerify,omitempty" jsonschema:"Verify TLS certificate (default true)"`
 	NoRequestEcho   bool   `json:"noRequestEcho,omitempty" jsonschema:"Omit the echoed request from output. Use when chunking large bodies to stay within token limits."`
 }
 
@@ -196,6 +194,10 @@ func sendRequestHandler(
 
 		output.EntryID = entry.Id
 
+		if entry.Error != nil && *entry.Error != "" {
+			output.Error = *entry.Error
+		}
+
 		bodyLimit := input.BodyLimit
 		if bodyLimit == 0 {
 			bodyLimit = httputil.DefaultBodyLimit
@@ -229,6 +231,6 @@ func RegisterSendRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_send_request",
-		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns entryId for follow-up via get_replay_entry. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
+		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns entryId for follow-up via get_replay_entry. Redirects are NOT followed (returns 3xx directly). TLS verification is enforced by the Caido replay engine. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
 	}, sendRequestHandler(client))
 }

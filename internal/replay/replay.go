@@ -70,7 +70,8 @@ func PollForEntry(
 			}
 			e := entryResp.ReplayEntry
 			if e != nil && e.Request != nil &&
-				e.Request.Response != nil {
+				(e.Request.Response != nil ||
+					(e.Error != nil && *e.Error != "")) {
 				return e, nil
 			}
 		}

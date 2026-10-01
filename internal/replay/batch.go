@@ -11,7 +11,6 @@ import (
 
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 // BatchRequest is a single request in a batch.
@@ -144,31 +143,15 @@ func executeSingle(
 		}
 	}
 
-	// Snapshot previous entry to detect new one.
-	var prevEntryID string
-	sessResp, err := client.Replay.GetSession(ctx, sessionID)
-	if err == nil && sessResp.ReplaySession != nil &&
-		sessResp.ReplaySession.ActiveEntry != nil {
-		prevEntryID = sessResp.ReplaySession.ActiveEntry.Id
-	}
-
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
-	taskInput := &gen.StartReplayTaskInput{
-		Connection: gen.ConnectionInfoInput{
-			Host:  host,
-			Port:  port,
-			IsTLS: useTLS,
-		},
-		Raw: rawB64,
-		Settings: gen.ReplayEntrySettingsInput{
-			Placeholders:        []gen.ReplayPlaceholderInput{},
-			UpdateContentLength: true,
-			ConnectionClose:     false,
-		},
-	}
+	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
 
-	// Send request.
-	_, err = client.Replay.SendRequest(ctx, sessionID, taskInput)
+	// Send request. Pooled sessions are reused across a batch, so the state
+	// returned here is what keeps the poller from reporting the previous
+	// request's response as this one's.
+	_, sendState, err := SendRaw(
+		ctx, client, sessionID, conn, rawB64, true, false,
+	)
 	if err != nil {
 		result.Error = fmt.Sprintf("send: %v", err)
 		return result
@@ -178,7 +161,7 @@ func executeSingle(
 	pollCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	entry, err := PollForEntry(pollCtx, client, sessionID, prevEntryID)
+	entry, err := PollForEntry(pollCtx, client, sendState)
 	if err != nil {
 		result.Error = fmt.Sprintf("poll: %v", err)
 		return result

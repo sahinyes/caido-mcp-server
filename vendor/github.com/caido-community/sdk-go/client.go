@@ -55,6 +55,7 @@ type Client struct {
 	Intercept    *InterceptSDK
 	Tamper       *TamperSDK
 	Auth         *AuthSDK
+	Streams      *StreamSDK
 
 	// Low-level access
 	GraphQL gql.Client
@@ -126,6 +127,7 @@ func NewClient(opts Options) (*Client, error) {
 	c.Intercept = &InterceptSDK{client: c}
 	c.Tamper = &TamperSDK{client: c}
 	c.Auth = &AuthSDK{client: c}
+	c.Streams = &StreamSDK{client: c}
 
 	return c, nil
 }

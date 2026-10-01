@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
 	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -34,29 +35,57 @@ func createReplaySessionHandler(
 			CollectionId: input.CollectionID,
 		}
 
+		// Required since 0.57: ReplaySessionKind! has no default server-side.
+		sessionInput.Kind = gen.ReplaySessionKindHttp
+
+		// A session with no requestSource is created with no entry, and there
+		// is no mutation that adds one later — so it could never be sent to.
+		// Seed it, with the named request when there is one.
 		if input.RequestID != "" {
 			sessionInput.RequestSource = &gen.RequestSourceInput{
 				Id: &input.RequestID,
 			}
+		} else {
+			sessionInput.RequestSource = replay.PlaceholderSource()
 		}
 
-		resp, err := client.Replay.CreateSession(ctx, sessionInput)
+		sessionID, _, err := client.Replay.CreateSession(ctx, sessionInput)
 		if err != nil {
 			return nil, CreateReplaySessionOutput{}, fmt.Errorf(
 				"failed to create replay session: %w", err,
 			)
 		}
 
-		s := resp.CreateReplaySession.Session
-		if s == nil {
-			return nil, CreateReplaySessionOutput{}, fmt.Errorf(
-				"create replay session returned no session",
-			)
+		// createReplaySession takes no name — it never has, so this tool
+		// accepted `name` and silently dropped it. Caido names a new session
+		// after its number; renaming is a separate mutation.
+		name := ""
+		if input.Name != "" {
+			if _, rerr := client.Replay.RenameSession(
+				ctx, sessionID, input.Name,
+			); rerr != nil {
+				return nil, CreateReplaySessionOutput{}, fmt.Errorf(
+					"session %s created but renaming it failed: %w",
+					sessionID, rerr,
+				)
+			}
+			name = input.Name
+		}
+
+		// The create payload's session is an interface now and the SDK returns
+		// ids only, so an unnamed session's name is read back rather than
+		// reported as empty.
+		if name == "" {
+			if sess, nerr := client.Replay.GetSession(
+				ctx, sessionID,
+			); nerr == nil && sess != nil {
+				name = sess.Name
+			}
 		}
 
 		return nil, CreateReplaySessionOutput{
-			SessionID: s.Id,
-			Name:      s.Name,
+			SessionID: sessionID,
+			Name:      name,
 		}, nil
 	}
 }

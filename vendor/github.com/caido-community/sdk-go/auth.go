@@ -33,3 +33,11 @@ func (s *AuthSDK) GetAuthenticationState(
 ) (*gen.GetAuthenticationStateResponse, error) {
 	return gen.GetAuthenticationState(ctx, s.client.GraphQL)
 }
+
+// LoginAsGuest authenticates as a guest user. Only succeeds on instances
+// started with guest access enabled (--allow-guests).
+func (s *AuthSDK) LoginAsGuest(
+	ctx context.Context,
+) (*gen.LoginAsGuestResponse, error) {
+	return gen.LoginAsGuest(ctx, s.client.GraphQL)
+}

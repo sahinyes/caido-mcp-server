@@ -9,7 +9,6 @@ import (
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 // sendReplay sends a CRLF-normalized raw HTTP request via the Replay API
@@ -26,30 +25,11 @@ func sendReplay(
 		return "", err
 	}
 
-	var prevEntryID string
-	sessResp, err := client.Replay.GetSession(ctx, sessionID)
-	if err == nil && sessResp.ReplaySession != nil &&
-		sessResp.ReplaySession.ActiveEntry != nil {
-		prevEntryID = sessResp.ReplaySession.ActiveEntry.Id
-	}
-
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
-	taskInput := &gen.StartReplayTaskInput{
-		Connection: gen.ConnectionInfoInput{
-			Host:  host,
-			Port:  port,
-			IsTLS: useTLS,
-		},
-		Raw: rawB64,
-		Settings: gen.ReplayEntrySettingsInput{
-			Placeholders:        []gen.ReplayPlaceholderInput{},
-			UpdateContentLength: true,
-			ConnectionClose:     false,
-		},
-	}
+	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
 
-	taskResp, err := client.Replay.SendRequest(
-		ctx, sessionID, taskInput,
+	taskResp, sendState, err := replay.SendRaw(
+		ctx, client, sessionID, conn, rawB64, true, false,
 	)
 	hasError := taskResp != nil &&
 		taskResp.StartReplayTask.GetError() != nil
@@ -64,19 +44,16 @@ func sendReplay(
 		}
 
 		if isTaskBusy {
-			newResp, createErr := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
-			)
+			newSessionID, _, createErr := replay.NewSession(ctx, client)
 			if createErr != nil {
 				return "", fmt.Errorf(
 					"fallback session: %w", createErr,
 				)
 			}
-			sessionID = newResp.CreateReplaySession.Session.Id
+			sessionID = newSessionID
 			replay.ResetDefaultSession(sessionID)
-			prevEntryID = ""
-			_, err = client.Replay.SendRequest(
-				ctx, sessionID, taskInput,
+			_, sendState, err = replay.SendRaw(
+				ctx, client, sessionID, conn, rawB64, true, false,
 			)
 			if err != nil {
 				return "", fmt.Errorf("send retry: %w", err)
@@ -86,7 +63,7 @@ func sendReplay(
 		}
 	}
 
-	entry, err := replay.PollForEntry(ctx, client, sessionID, prevEntryID)
+	entry, err := replay.PollForEntry(ctx, client, sendState)
 	if err != nil {
 		return "", err
 	}

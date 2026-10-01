@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 // SessionPool manages a pool of replay sessions for parallel sends.
@@ -52,16 +51,12 @@ func NewSessionPool(
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			resp, err := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
-			)
+			id, _, err := NewSession(ctx, client)
 			if err != nil {
 				results[idx] = result{err: err}
 				return
 			}
-			results[idx] = result{
-				id: resp.CreateReplaySession.Session.Id,
-			}
+			results[idx] = result{id: id}
 		}(i)
 	}
 	wg.Wait()

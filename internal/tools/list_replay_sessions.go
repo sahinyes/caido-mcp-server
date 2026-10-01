@@ -4,6 +4,7 @@ import (
 	"context"
 
 	caido "github.com/caido-community/sdk-go"
+	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -32,6 +33,13 @@ func listReplaySessionsHandler(
 		req *mcp.CallToolRequest,
 		input ListReplaySessionsInput,
 	) (*mcp.CallToolResult, ListReplaySessionsOutput, error) {
+		// Total comes from the server's own count, not from len(Sessions).
+		// The SDK's ListSessionSummaries would be tidier, but it drops the
+		// connection's count, and then a page the server decided to truncate
+		// would read as a complete list — the whole set does come back in one
+		// page today (546 of 546, measured 2026-10-01), which is exactly the
+		// kind of thing that stops being true quietly. Reported separately,
+		// Total > len(sessions) says so out loud.
 		resp, err := client.Replay.ListSessions(ctx, nil)
 		if err != nil {
 			return nil, ListReplaySessionsOutput{}, err
@@ -39,20 +47,24 @@ func listReplaySessionsHandler(
 
 		conn := resp.ReplaySessions
 		output := ListReplaySessionsOutput{
-			Sessions: make(
-				[]ReplaySessionSummary, 0, len(conn.Edges),
-			),
-			Total: conn.Count.Value,
+			Sessions: make([]ReplaySessionSummary, 0, len(conn.Edges)),
+			Total:    conn.Count.Value,
 		}
 
+		// ReplaySession became an interface in 0.57 (HTTP and WS variants), so
+		// activeEntry and collection no longer sit on the node itself.
 		for _, edge := range conn.Edges {
-			s := edge.Node
-			summary := ReplaySessionSummary{
-				ID:   s.Id,
-				Name: s.Name,
+			node := edge.Node
+			if node == nil {
+				continue
 			}
-			if s.ActiveEntry != nil {
-				id := s.ActiveEntry.Id
+			summary := ReplaySessionSummary{
+				ID:   node.GetId(),
+				Name: node.GetName(),
+			}
+			if httpNode, ok := node.(*gen.ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp); ok &&
+				httpNode.ActiveEntry != nil {
+				id := (*httpNode.ActiveEntry).GetId()
 				summary.ActiveEntryID = &id
 			}
 			output.Sessions = append(output.Sessions, summary)

@@ -75,6 +75,11 @@ var AllAuthenticationScope = []AuthenticationScope{
 type AutomateEntryRequestOrderBy string
 
 const (
+	AutomateEntryRequestOrderByExtract0          AutomateEntryRequestOrderBy = "EXTRACT_0"
+	AutomateEntryRequestOrderByExtract1          AutomateEntryRequestOrderBy = "EXTRACT_1"
+	AutomateEntryRequestOrderByExtract2          AutomateEntryRequestOrderBy = "EXTRACT_2"
+	AutomateEntryRequestOrderByExtract3          AutomateEntryRequestOrderBy = "EXTRACT_3"
+	AutomateEntryRequestOrderByExtract4          AutomateEntryRequestOrderBy = "EXTRACT_4"
 	AutomateEntryRequestOrderById                AutomateEntryRequestOrderBy = "ID"
 	AutomateEntryRequestOrderByPayload0          AutomateEntryRequestOrderBy = "PAYLOAD_0"
 	AutomateEntryRequestOrderByPayload1          AutomateEntryRequestOrderBy = "PAYLOAD_1"
@@ -82,12 +87,18 @@ const (
 	AutomateEntryRequestOrderByPayload3          AutomateEntryRequestOrderBy = "PAYLOAD_3"
 	AutomateEntryRequestOrderByPayload4          AutomateEntryRequestOrderBy = "PAYLOAD_4"
 	AutomateEntryRequestOrderByPosition          AutomateEntryRequestOrderBy = "POSITION"
+	AutomateEntryRequestOrderByReqCreatedAt      AutomateEntryRequestOrderBy = "REQ_CREATED_AT"
 	AutomateEntryRequestOrderByRespLength        AutomateEntryRequestOrderBy = "RESP_LENGTH"
 	AutomateEntryRequestOrderByRespRoundtripTime AutomateEntryRequestOrderBy = "RESP_ROUNDTRIP_TIME"
 	AutomateEntryRequestOrderByRespStatusCode    AutomateEntryRequestOrderBy = "RESP_STATUS_CODE"
 )
 
 var AllAutomateEntryRequestOrderBy = []AutomateEntryRequestOrderBy{
+	AutomateEntryRequestOrderByExtract0,
+	AutomateEntryRequestOrderByExtract1,
+	AutomateEntryRequestOrderByExtract2,
+	AutomateEntryRequestOrderByExtract3,
+	AutomateEntryRequestOrderByExtract4,
 	AutomateEntryRequestOrderById,
 	AutomateEntryRequestOrderByPayload0,
 	AutomateEntryRequestOrderByPayload1,
@@ -95,6 +106,7 @@ var AllAutomateEntryRequestOrderBy = []AutomateEntryRequestOrderBy{
 	AutomateEntryRequestOrderByPayload3,
 	AutomateEntryRequestOrderByPayload4,
 	AutomateEntryRequestOrderByPosition,
+	AutomateEntryRequestOrderByReqCreatedAt,
 	AutomateEntryRequestOrderByRespLength,
 	AutomateEntryRequestOrderByRespRoundtripTime,
 	AutomateEntryRequestOrderByRespStatusCode,
@@ -941,6 +953,7 @@ func (v *CreateFilterPresetCreateFilterPresetCreateFilterPresetPayloadFilterFilt
 type CreateFilterPresetInput struct {
 	Alias  string     `json:"alias"`
 	Clause QueryInput `json:"clause"`
+	Global bool       `json:"global"`
 	Name   string     `json:"name"`
 }
 
@@ -949,6 +962,9 @@ func (v *CreateFilterPresetInput) GetAlias() string { return v.Alias }
 
 // GetClause returns CreateFilterPresetInput.Clause, and is useful for accessing the field via an interface.
 func (v *CreateFilterPresetInput) GetClause() QueryInput { return v.Clause }
+
+// GetGlobal returns CreateFilterPresetInput.Global, and is useful for accessing the field via an interface.
+func (v *CreateFilterPresetInput) GetGlobal() bool { return v.Global }
 
 // GetName returns CreateFilterPresetInput.Name, and is useful for accessing the field via an interface.
 func (v *CreateFilterPresetInput) GetName() string { return v.Name }
@@ -1506,7 +1522,7 @@ func (v *CreateReplaySessionCollectionResponse) GetCreateReplaySessionCollection
 
 // CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload includes the requested fields of the GraphQL type CreateReplaySessionPayload.
 type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload struct {
-	Session *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession `json:"session"`
+	Session *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession `json:"-"`
 }
 
 // GetSession returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Session, and is useful for accessing the field via an interface.
@@ -1514,32 +1530,403 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) GetSe
 	return v.Session
 }
 
-// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload
+		Session json.RawMessage `json:"session"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Session
+		src := firstPass.Session
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession)
+			err = __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession) GetId() string {
+type __premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayload struct {
+	Session json.RawMessage `json:"session"`
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) __premarshalJSON() (*__premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayload, error) {
+	var retval __premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayload
+
+	{
+
+		dst := &retval.Session
+		src := v.Session
+		if src != nil {
+			var err error
+			*dst, err = __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession is implemented by the following types:
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession interface {
+	implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession() {
+}
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession() {
+}
+
+func __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession(b []byte, v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession(v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		premarshaled, err := v.__premarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		result := struct {
+			TypeName string `json:"__typename"`
+			*__premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp
+		}{typename, premarshaled}
+		return json.Marshal(result)
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession: "%T"`, v)
+	}
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp struct {
+	Typename    *string                                                                                                         `json:"__typename"`
+	Id          string                                                                                                          `json:"id"`
+	Name        string                                                                                                          `json:"name"`
+	ActiveEntry *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry `json:"-"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) GetId() string {
 	return v.Id
 }
 
-// GetName returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession) GetName() string {
+// GetName returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) GetName() string {
+	return v.Name
+}
+
+// GetActiveEntry returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.ActiveEntry, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) GetActiveEntry() *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry {
+	return v.ActiveEntry
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp
+		ActiveEntry json.RawMessage `json:"activeEntry"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.ActiveEntry
+		src := firstPass.ActiveEntry
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry)
+			err = __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
+
+	Id string `json:"id"`
+
+	Name string `json:"name"`
+
+	ActiveEntry json.RawMessage `json:"activeEntry"`
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp) __premarshalJSON() (*__premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp, error) {
+	var retval __premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp
+
+	retval.Typename = v.Typename
+	retval.Id = v.Id
+	retval.Name = v.Name
+	{
+
+		dst := &retval.ActiveEntry
+		src := v.ActiveEntry
+		if src != nil {
+			var err error
+			*dst, err = __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry is implemented by the following types:
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry interface {
+	implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry() {
+}
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry() {
+}
+
+func __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry(b []byte, v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry(v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntry: "%T"`, v)
+	}
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryHttp) GetId() string {
+	return v.Id
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs.Id, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionHttpActiveEntryReplayEntryWs) GetId() string {
+	return v.Id
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs) GetId() string {
+	return v.Id
+}
+
+// GetName returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySessionWs) GetName() string {
 	return v.Name
 }
 
 type CreateReplaySessionInput struct {
-	CollectionId  *string             `json:"collectionId"`
-	RequestSource *RequestSourceInput `json:"requestSource"`
+	CollectionId  *string                     `json:"collectionId"`
+	Kind          ReplaySessionKind           `json:"kind"`
+	RequestSource *RequestSourceInput         `json:"requestSource"`
+	Settings      *ReplaySessionSettingsInput `json:"settings"`
 }
 
 // GetCollectionId returns CreateReplaySessionInput.CollectionId, and is useful for accessing the field via an interface.
 func (v *CreateReplaySessionInput) GetCollectionId() *string { return v.CollectionId }
 
+// GetKind returns CreateReplaySessionInput.Kind, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionInput) GetKind() ReplaySessionKind { return v.Kind }
+
 // GetRequestSource returns CreateReplaySessionInput.RequestSource, and is useful for accessing the field via an interface.
 func (v *CreateReplaySessionInput) GetRequestSource() *RequestSourceInput { return v.RequestSource }
+
+// GetSettings returns CreateReplaySessionInput.Settings, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionInput) GetSettings() *ReplaySessionSettingsInput { return v.Settings }
 
 // CreateReplaySessionResponse is returned by CreateReplaySession on success.
 type CreateReplaySessionResponse struct {
@@ -4636,106 +5023,197 @@ type GetInterceptStatusResponse struct {
 // GetInterceptStatus returns GetInterceptStatusResponse.InterceptStatus, and is useful for accessing the field via an interface.
 func (v *GetInterceptStatusResponse) GetInterceptStatus() InterceptStatus { return v.InterceptStatus }
 
-// GetReplayEntryReplayEntry includes the requested fields of the GraphQL type ReplayEntry.
-type GetReplayEntryReplayEntry struct {
-	Id         string                                            `json:"id"`
-	Raw        string                                            `json:"raw"`
-	Error      *string                                           `json:"error"`
-	CreatedAt  int64                                             `json:"createdAt"`
-	Connection GetReplayEntryReplayEntryConnectionConnectionInfo `json:"connection"`
-	Settings   GetReplayEntryReplayEntrySettings                 `json:"settings"`
-	Request    *GetReplayEntryReplayEntryRequest                 `json:"request"`
+// GetReplayEntryReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// GetReplayEntryReplayEntry is implemented by the following types:
+// GetReplayEntryReplayEntryReplayEntryHttp
+// GetReplayEntryReplayEntryReplayEntryWs
+type GetReplayEntryReplayEntry interface {
+	implementsGraphQLInterfaceGetReplayEntryReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetError returns the interface-field "error" from its implementation.
+	GetError() *string
+	// GetCreatedAt returns the interface-field "createdAt" from its implementation.
+	GetCreatedAt() int64
 }
 
-// GetId returns GetReplayEntryReplayEntry.Id, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetId() string { return v.Id }
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) implementsGraphQLInterfaceGetReplayEntryReplayEntry() {
+}
+func (v *GetReplayEntryReplayEntryReplayEntryWs) implementsGraphQLInterfaceGetReplayEntryReplayEntry() {
+}
 
-// GetRaw returns GetReplayEntryReplayEntry.Raw, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetRaw() string { return v.Raw }
+func __unmarshalGetReplayEntryReplayEntry(b []byte, v *GetReplayEntryReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
 
-// GetError returns GetReplayEntryReplayEntry.Error, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetError() *string { return v.Error }
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
 
-// GetCreatedAt returns GetReplayEntryReplayEntry.CreatedAt, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetCreatedAt() int64 { return v.CreatedAt }
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(GetReplayEntryReplayEntryReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for GetReplayEntryReplayEntry: "%v"`, tn.TypeName)
+	}
+}
 
-// GetConnection returns GetReplayEntryReplayEntry.Connection, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetConnection() GetReplayEntryReplayEntryConnectionConnectionInfo {
+func __marshalGetReplayEntryReplayEntry(v *GetReplayEntryReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *GetReplayEntryReplayEntryReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplayEntryReplayEntryReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetReplayEntryReplayEntryReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplayEntryReplayEntryReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for GetReplayEntryReplayEntry: "%T"`, v)
+	}
+}
+
+// GetReplayEntryReplayEntryReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type GetReplayEntryReplayEntryReplayEntryHttp struct {
+	Typename   *string                                                          `json:"__typename"`
+	Id         string                                                           `json:"id"`
+	Error      *string                                                          `json:"error"`
+	CreatedAt  int64                                                            `json:"createdAt"`
+	Raw        string                                                           `json:"raw"`
+	Connection GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo `json:"connection"`
+	Settings   GetReplayEntryReplayEntryReplayEntryHttpSettings                 `json:"settings"`
+	Request    *GetReplayEntryReplayEntryReplayEntryHttpRequest                 `json:"request"`
+}
+
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetTypename() *string { return v.Typename }
+
+// GetId returns GetReplayEntryReplayEntryReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetId() string { return v.Id }
+
+// GetError returns GetReplayEntryReplayEntryReplayEntryHttp.Error, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetError() *string { return v.Error }
+
+// GetCreatedAt returns GetReplayEntryReplayEntryReplayEntryHttp.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetCreatedAt() int64 { return v.CreatedAt }
+
+// GetRaw returns GetReplayEntryReplayEntryReplayEntryHttp.Raw, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetRaw() string { return v.Raw }
+
+// GetConnection returns GetReplayEntryReplayEntryReplayEntryHttp.Connection, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetConnection() GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo {
 	return v.Connection
 }
 
-// GetSettings returns GetReplayEntryReplayEntry.Settings, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetSettings() GetReplayEntryReplayEntrySettings {
+// GetSettings returns GetReplayEntryReplayEntryReplayEntryHttp.Settings, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetSettings() GetReplayEntryReplayEntryReplayEntryHttpSettings {
 	return v.Settings
 }
 
-// GetRequest returns GetReplayEntryReplayEntry.Request, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntry) GetRequest() *GetReplayEntryReplayEntryRequest { return v.Request }
+// GetRequest returns GetReplayEntryReplayEntryReplayEntryHttp.Request, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttp) GetRequest() *GetReplayEntryReplayEntryReplayEntryHttpRequest {
+	return v.Request
+}
 
-// GetReplayEntryReplayEntryConnectionConnectionInfo includes the requested fields of the GraphQL type ConnectionInfo.
-type GetReplayEntryReplayEntryConnectionConnectionInfo struct {
+// GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo includes the requested fields of the GraphQL type ConnectionInfo.
+type GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo struct {
 	Host  string `json:"host"`
 	Port  int    `json:"port"`
 	IsTLS bool   `json:"isTLS"`
 }
 
-// GetHost returns GetReplayEntryReplayEntryConnectionConnectionInfo.Host, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryConnectionConnectionInfo) GetHost() string { return v.Host }
-
-// GetPort returns GetReplayEntryReplayEntryConnectionConnectionInfo.Port, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryConnectionConnectionInfo) GetPort() int { return v.Port }
-
-// GetIsTLS returns GetReplayEntryReplayEntryConnectionConnectionInfo.IsTLS, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryConnectionConnectionInfo) GetIsTLS() bool { return v.IsTLS }
-
-// GetReplayEntryReplayEntryRequest includes the requested fields of the GraphQL type Request.
-type GetReplayEntryReplayEntryRequest struct {
-	Id        string                                    `json:"id"`
-	Method    string                                    `json:"method"`
-	Host      string                                    `json:"host"`
-	Port      int                                       `json:"port"`
-	Path      string                                    `json:"path"`
-	Query     string                                    `json:"query"`
-	IsTls     bool                                      `json:"isTls"`
-	Raw       string                                    `json:"raw"`
-	CreatedAt int64                                     `json:"createdAt"`
-	Response  *GetReplayEntryReplayEntryRequestResponse `json:"response"`
+// GetHost returns GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo.Host, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo) GetHost() string {
+	return v.Host
 }
 
-// GetId returns GetReplayEntryReplayEntryRequest.Id, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetId() string { return v.Id }
+// GetPort returns GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo.Port, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo) GetPort() int {
+	return v.Port
+}
 
-// GetMethod returns GetReplayEntryReplayEntryRequest.Method, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetMethod() string { return v.Method }
+// GetIsTLS returns GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo.IsTLS, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpConnectionConnectionInfo) GetIsTLS() bool {
+	return v.IsTLS
+}
 
-// GetHost returns GetReplayEntryReplayEntryRequest.Host, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetHost() string { return v.Host }
+// GetReplayEntryReplayEntryReplayEntryHttpRequest includes the requested fields of the GraphQL type Request.
+type GetReplayEntryReplayEntryReplayEntryHttpRequest struct {
+	Id        string                                                   `json:"id"`
+	Method    string                                                   `json:"method"`
+	Host      string                                                   `json:"host"`
+	Port      int                                                      `json:"port"`
+	Path      string                                                   `json:"path"`
+	Query     string                                                   `json:"query"`
+	IsTls     bool                                                     `json:"isTls"`
+	Raw       string                                                   `json:"raw"`
+	CreatedAt int64                                                    `json:"createdAt"`
+	Response  *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse `json:"response"`
+}
 
-// GetPort returns GetReplayEntryReplayEntryRequest.Port, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetPort() int { return v.Port }
+// GetId returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Id, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetId() string { return v.Id }
 
-// GetPath returns GetReplayEntryReplayEntryRequest.Path, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetPath() string { return v.Path }
+// GetMethod returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Method, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetMethod() string { return v.Method }
 
-// GetQuery returns GetReplayEntryReplayEntryRequest.Query, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetQuery() string { return v.Query }
+// GetHost returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Host, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetHost() string { return v.Host }
 
-// GetIsTls returns GetReplayEntryReplayEntryRequest.IsTls, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetIsTls() bool { return v.IsTls }
+// GetPort returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Port, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetPort() int { return v.Port }
 
-// GetRaw returns GetReplayEntryReplayEntryRequest.Raw, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetRaw() string { return v.Raw }
+// GetPath returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Path, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetPath() string { return v.Path }
 
-// GetCreatedAt returns GetReplayEntryReplayEntryRequest.CreatedAt, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetCreatedAt() int64 { return v.CreatedAt }
+// GetQuery returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Query, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetQuery() string { return v.Query }
 
-// GetResponse returns GetReplayEntryReplayEntryRequest.Response, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequest) GetResponse() *GetReplayEntryReplayEntryRequestResponse {
+// GetIsTls returns GetReplayEntryReplayEntryReplayEntryHttpRequest.IsTls, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetIsTls() bool { return v.IsTls }
+
+// GetRaw returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Raw, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetRaw() string { return v.Raw }
+
+// GetCreatedAt returns GetReplayEntryReplayEntryReplayEntryHttpRequest.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetCreatedAt() int64 { return v.CreatedAt }
+
+// GetResponse returns GetReplayEntryReplayEntryReplayEntryHttpRequest.Response, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequest) GetResponse() *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse {
 	return v.Response
 }
 
-// GetReplayEntryReplayEntryRequestResponse includes the requested fields of the GraphQL type Response.
-type GetReplayEntryReplayEntryRequestResponse struct {
+// GetReplayEntryReplayEntryReplayEntryHttpRequestResponse includes the requested fields of the GraphQL type Response.
+type GetReplayEntryReplayEntryReplayEntryHttpRequestResponse struct {
 	Id            string `json:"id"`
 	StatusCode    int    `json:"statusCode"`
 	Raw           string `json:"raw"`
@@ -4743,107 +5221,111 @@ type GetReplayEntryReplayEntryRequestResponse struct {
 	Length        int    `json:"length"`
 }
 
-// GetId returns GetReplayEntryReplayEntryRequestResponse.Id, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequestResponse) GetId() string { return v.Id }
+// GetId returns GetReplayEntryReplayEntryReplayEntryHttpRequestResponse.Id, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse) GetId() string { return v.Id }
 
-// GetStatusCode returns GetReplayEntryReplayEntryRequestResponse.StatusCode, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequestResponse) GetStatusCode() int { return v.StatusCode }
-
-// GetRaw returns GetReplayEntryReplayEntryRequestResponse.Raw, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequestResponse) GetRaw() string { return v.Raw }
-
-// GetRoundtripTime returns GetReplayEntryReplayEntryRequestResponse.RoundtripTime, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequestResponse) GetRoundtripTime() int { return v.RoundtripTime }
-
-// GetLength returns GetReplayEntryReplayEntryRequestResponse.Length, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntryRequestResponse) GetLength() int { return v.Length }
-
-// GetReplayEntryReplayEntrySettings includes the requested fields of the GraphQL type ReplayEntrySettings.
-type GetReplayEntryReplayEntrySettings struct {
-	Placeholders []GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder `json:"placeholders"`
+// GetStatusCode returns GetReplayEntryReplayEntryReplayEntryHttpRequestResponse.StatusCode, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse) GetStatusCode() int {
+	return v.StatusCode
 }
 
-// GetPlaceholders returns GetReplayEntryReplayEntrySettings.Placeholders, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettings) GetPlaceholders() []GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder {
+// GetRaw returns GetReplayEntryReplayEntryReplayEntryHttpRequestResponse.Raw, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse) GetRaw() string { return v.Raw }
+
+// GetRoundtripTime returns GetReplayEntryReplayEntryReplayEntryHttpRequestResponse.RoundtripTime, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse) GetRoundtripTime() int {
+	return v.RoundtripTime
+}
+
+// GetLength returns GetReplayEntryReplayEntryReplayEntryHttpRequestResponse.Length, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpRequestResponse) GetLength() int { return v.Length }
+
+// GetReplayEntryReplayEntryReplayEntryHttpSettings includes the requested fields of the GraphQL type ReplayEntryHttpSettings.
+type GetReplayEntryReplayEntryReplayEntryHttpSettings struct {
+	Placeholders []GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder `json:"placeholders"`
+}
+
+// GetPlaceholders returns GetReplayEntryReplayEntryReplayEntryHttpSettings.Placeholders, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettings) GetPlaceholders() []GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder {
 	return v.Placeholders
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder includes the requested fields of the GraphQL type ReplayPlaceholder.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder struct {
-	InputRange    GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange                        `json:"inputRange"`
-	OutputRange   GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange                       `json:"outputRange"`
-	Preprocessors []GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor `json:"preprocessors"`
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder includes the requested fields of the GraphQL type ReplayPlaceholder.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder struct {
+	InputRange    GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange                        `json:"inputRange"`
+	OutputRange   GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange                       `json:"outputRange"`
+	Preprocessors []GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor `json:"preprocessors"`
 }
 
-// GetInputRange returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder.InputRange, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder) GetInputRange() GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange {
+// GetInputRange returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder.InputRange, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder) GetInputRange() GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange {
 	return v.InputRange
 }
 
-// GetOutputRange returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder.OutputRange, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder) GetOutputRange() GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange {
+// GetOutputRange returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder.OutputRange, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder) GetOutputRange() GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange {
 	return v.OutputRange
 }
 
-// GetPreprocessors returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder.Preprocessors, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholder) GetPreprocessors() []GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor {
+// GetPreprocessors returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder.Preprocessors, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholder) GetPreprocessors() []GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor {
 	return v.Preprocessors
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange includes the requested fields of the GraphQL type Range.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange struct {
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange includes the requested fields of the GraphQL type Range.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange struct {
 	Start int `json:"start"`
 	End   int `json:"end"`
 }
 
-// GetStart returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange.Start, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange) GetStart() int {
+// GetStart returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange.Start, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange) GetStart() int {
 	return v.Start
 }
 
-// GetEnd returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange.End, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderInputRange) GetEnd() int {
+// GetEnd returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange.End, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderInputRange) GetEnd() int {
 	return v.End
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange includes the requested fields of the GraphQL type Range.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange struct {
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange includes the requested fields of the GraphQL type Range.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange struct {
 	Start int `json:"start"`
 	End   int `json:"end"`
 }
 
-// GetStart returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange.Start, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange) GetStart() int {
+// GetStart returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange.Start, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange) GetStart() int {
 	return v.Start
 }
 
-// GetEnd returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange.End, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderOutputRange) GetEnd() int {
+// GetEnd returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange.End, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderOutputRange) GetEnd() int {
 	return v.End
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor includes the requested fields of the GraphQL type ReplayPreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor struct {
-	Options GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions `json:"-"`
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor includes the requested fields of the GraphQL type ReplayPreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor struct {
+	Options GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions `json:"-"`
 }
 
-// GetOptions returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) GetOptions() GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions {
+// GetOptions returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) GetOptions() GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions {
 	return v.Options
 }
 
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) UnmarshalJSON(b []byte) error {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) UnmarshalJSON(b []byte) error {
 
 	if string(b) == "null" {
 		return nil
 	}
 
 	var firstPass struct {
-		*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor
+		*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor
 		Options json.RawMessage `json:"options"`
 		graphql.NoUnmarshalJSON
 	}
-	firstPass.GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor = v
+	firstPass.GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor = v
 
 	err := json.Unmarshal(b, &firstPass)
 	if err != nil {
@@ -4854,22 +5336,22 @@ func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreproces
 		dst := &v.Options
 		src := firstPass.Options
 		if len(src) != 0 && string(src) != "null" {
-			err = __unmarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(
+			err = __unmarshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"unable to unmarshal GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options: %w", err)
+					"unable to unmarshal GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options: %w", err)
 			}
 		}
 	}
 	return nil
 }
 
-type __premarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor struct {
+type __premarshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor struct {
 	Options json.RawMessage `json:"options"`
 }
 
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) MarshalJSON() ([]byte, error) {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) MarshalJSON() ([]byte, error) {
 	premarshaled, err := v.__premarshalJSON()
 	if err != nil {
 		return nil, err
@@ -4877,50 +5359,50 @@ func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreproces
 	return json.Marshal(premarshaled)
 }
 
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) __premarshalJSON() (*__premarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor, error) {
-	var retval __premarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor) __premarshalJSON() (*__premarshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor, error) {
+	var retval __premarshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor
 
 	{
 
 		dst := &retval.Options
 		src := v.Options
 		var err error
-		*dst, err = __marshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(
+		*dst, err = __marshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"unable to marshal GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options: %w", err)
+				"unable to marshal GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessor.Options: %w", err)
 		}
 	}
 	return &retval, nil
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions includes the requested fields of the GraphQL interface ReplayPreprocessorOptions.
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions includes the requested fields of the GraphQL interface ReplayPreprocessorOptions.
 //
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions is implemented by the following types:
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions interface {
-	implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions()
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions is implemented by the following types:
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions interface {
+	implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions()
 	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
 	GetTypename() *string
 }
 
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
 }
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
 }
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
 }
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
 }
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor) implementsGraphQLInterfaceGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions() {
 }
 
-func __unmarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(b []byte, v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions) error {
+func __unmarshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(b []byte, v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions) error {
 	if string(b) == "null" {
 		return nil
 	}
@@ -4935,306 +5417,920 @@ func __unmarshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPr
 
 	switch tn.TypeName {
 	case "ReplayEnvironmentPreprocessor":
-		*v = new(GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor)
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor)
 		return json.Unmarshal(b, *v)
 	case "ReplayPrefixPreprocessor":
-		*v = new(GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor)
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor)
 		return json.Unmarshal(b, *v)
 	case "ReplaySuffixPreprocessor":
-		*v = new(GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor)
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor)
 		return json.Unmarshal(b, *v)
 	case "ReplayUrlEncodePreprocessor":
-		*v = new(GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor)
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor)
 		return json.Unmarshal(b, *v)
 	case "ReplayWorkflowPreprocessor":
-		*v = new(GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor)
+		*v = new(GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor)
 		return json.Unmarshal(b, *v)
 	case "":
 		return fmt.Errorf(
 			"response was missing ReplayPreprocessorOptions.__typename")
 	default:
 		return fmt.Errorf(
-			`unexpected concrete type for GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions: "%v"`, tn.TypeName)
+			`unexpected concrete type for GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions: "%v"`, tn.TypeName)
 	}
 }
 
-func __marshalGetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions) ([]byte, error) {
+func __marshalGetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions(v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions) ([]byte, error) {
 
 	var typename string
 	switch v := (*v).(type) {
-	case *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor:
+	case *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor:
 		typename = "ReplayEnvironmentPreprocessor"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor
+			*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor:
+	case *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor:
 		typename = "ReplayPrefixPreprocessor"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor
+			*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor:
+	case *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor:
 		typename = "ReplaySuffixPreprocessor"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor
+			*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor:
+	case *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor:
 		typename = "ReplayUrlEncodePreprocessor"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor
+			*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor:
+	case *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor:
 		typename = "ReplayWorkflowPreprocessor"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor
+			*GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor
 		}{typename, v}
 		return json.Marshal(result)
 	case nil:
 		return []byte("null"), nil
 	default:
 		return nil, fmt.Errorf(
-			`unexpected concrete type for GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions: "%T"`, v)
+			`unexpected concrete type for GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptions: "%T"`, v)
 	}
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor includes the requested fields of the GraphQL type ReplayEnvironmentPreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor struct {
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor includes the requested fields of the GraphQL type ReplayEnvironmentPreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor struct {
 	Typename *string `json:"__typename"`
 }
 
-// GetTypename returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor.Typename, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor) GetTypename() *string {
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayEnvironmentPreprocessor) GetTypename() *string {
 	return v.Typename
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor includes the requested fields of the GraphQL type ReplayPrefixPreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor struct {
-	Typename *string `json:"__typename"`
-	Value    string  `json:"value"`
-}
-
-// GetTypename returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor.Typename, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) GetTypename() *string {
-	return v.Typename
-}
-
-// GetValue returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor.Value, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) GetValue() string {
-	return v.Value
-}
-
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor includes the requested fields of the GraphQL type ReplaySuffixPreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor struct {
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor includes the requested fields of the GraphQL type ReplayPrefixPreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor struct {
 	Typename *string `json:"__typename"`
 	Value    string  `json:"value"`
 }
 
-// GetTypename returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor.Typename, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) GetTypename() *string {
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) GetTypename() *string {
 	return v.Typename
 }
 
-// GetValue returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor.Value, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) GetValue() string {
+// GetValue returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor.Value, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayPrefixPreprocessor) GetValue() string {
 	return v.Value
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor includes the requested fields of the GraphQL type ReplayUrlEncodePreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor struct {
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor includes the requested fields of the GraphQL type ReplaySuffixPreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor struct {
 	Typename *string `json:"__typename"`
+	Value    string  `json:"value"`
 }
 
-// GetTypename returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor.Typename, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor) GetTypename() *string {
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) GetTypename() *string {
 	return v.Typename
 }
 
-// GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor includes the requested fields of the GraphQL type ReplayWorkflowPreprocessor.
-type GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor struct {
+// GetValue returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor.Value, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplaySuffixPreprocessor) GetValue() string {
+	return v.Value
+}
+
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor includes the requested fields of the GraphQL type ReplayUrlEncodePreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor struct {
 	Typename *string `json:"__typename"`
 }
 
-// GetTypename returns GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor.Typename, and is useful for accessing the field via an interface.
-func (v *GetReplayEntryReplayEntrySettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor) GetTypename() *string {
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayUrlEncodePreprocessor) GetTypename() *string {
 	return v.Typename
 }
+
+// GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor includes the requested fields of the GraphQL type ReplayWorkflowPreprocessor.
+type GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryHttpSettingsPlaceholdersReplayPlaceholderPreprocessorsReplayPreprocessorOptionsReplayWorkflowPreprocessor) GetTypename() *string {
+	return v.Typename
+}
+
+// GetReplayEntryReplayEntryReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type GetReplayEntryReplayEntryReplayEntryWs struct {
+	Typename  *string `json:"__typename"`
+	Id        string  `json:"id"`
+	Error     *string `json:"error"`
+	CreatedAt int64   `json:"createdAt"`
+}
+
+// GetTypename returns GetReplayEntryReplayEntryReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryWs) GetTypename() *string { return v.Typename }
+
+// GetId returns GetReplayEntryReplayEntryReplayEntryWs.Id, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryWs) GetId() string { return v.Id }
+
+// GetError returns GetReplayEntryReplayEntryReplayEntryWs.Error, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryWs) GetError() *string { return v.Error }
+
+// GetCreatedAt returns GetReplayEntryReplayEntryReplayEntryWs.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetReplayEntryReplayEntryReplayEntryWs) GetCreatedAt() int64 { return v.CreatedAt }
 
 // GetReplayEntryResponse is returned by GetReplayEntry on success.
 type GetReplayEntryResponse struct {
-	ReplayEntry *GetReplayEntryReplayEntry `json:"replayEntry"`
+	ReplayEntry *GetReplayEntryReplayEntry `json:"-"`
 }
 
 // GetReplayEntry returns GetReplayEntryResponse.ReplayEntry, and is useful for accessing the field via an interface.
 func (v *GetReplayEntryResponse) GetReplayEntry() *GetReplayEntryReplayEntry { return v.ReplayEntry }
 
-// GetReplaySessionReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type GetReplaySessionReplaySession struct {
-	Id          string                                                    `json:"id"`
-	Name        string                                                    `json:"name"`
-	ActiveEntry *GetReplaySessionReplaySessionActiveEntryReplayEntry      `json:"activeEntry"`
-	Collection  GetReplaySessionReplaySessionCollection                   `json:"collection"`
-	Entries     GetReplaySessionReplaySessionEntriesReplayEntryConnection `json:"entries"`
+func (v *GetReplayEntryResponse) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*GetReplayEntryResponse
+		ReplayEntry json.RawMessage `json:"replayEntry"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.GetReplayEntryResponse = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.ReplayEntry
+		src := firstPass.ReplayEntry
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(GetReplayEntryReplayEntry)
+			err = __unmarshalGetReplayEntryReplayEntry(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal GetReplayEntryResponse.ReplayEntry: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns GetReplaySessionReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySession) GetId() string { return v.Id }
+type __premarshalGetReplayEntryResponse struct {
+	ReplayEntry json.RawMessage `json:"replayEntry"`
+}
 
-// GetName returns GetReplaySessionReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySession) GetName() string { return v.Name }
+func (v *GetReplayEntryResponse) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
 
-// GetActiveEntry returns GetReplaySessionReplaySession.ActiveEntry, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySession) GetActiveEntry() *GetReplaySessionReplaySessionActiveEntryReplayEntry {
+func (v *GetReplayEntryResponse) __premarshalJSON() (*__premarshalGetReplayEntryResponse, error) {
+	var retval __premarshalGetReplayEntryResponse
+
+	{
+
+		dst := &retval.ReplayEntry
+		src := v.ReplayEntry
+		if src != nil {
+			var err error
+			*dst, err = __marshalGetReplayEntryReplayEntry(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal GetReplayEntryResponse.ReplayEntry: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// GetReplaySessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// GetReplaySessionReplaySession is implemented by the following types:
+// GetReplaySessionReplaySessionReplaySessionHttp
+// GetReplaySessionReplaySessionReplaySessionWs
+type GetReplaySessionReplaySession interface {
+	implementsGraphQLInterfaceGetReplaySessionReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) implementsGraphQLInterfaceGetReplaySessionReplaySession() {
+}
+func (v *GetReplaySessionReplaySessionReplaySessionWs) implementsGraphQLInterfaceGetReplaySessionReplaySession() {
+}
+
+func __unmarshalGetReplaySessionReplaySession(b []byte, v *GetReplaySessionReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(GetReplaySessionReplaySessionReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(GetReplaySessionReplaySessionReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalGetReplaySessionReplaySession(v *GetReplaySessionReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *GetReplaySessionReplaySessionReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		premarshaled, err := v.__premarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		result := struct {
+			TypeName string `json:"__typename"`
+			*__premarshalGetReplaySessionReplaySessionReplaySessionHttp
+		}{typename, premarshaled}
+		return json.Marshal(result)
+	case *GetReplaySessionReplaySessionReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplaySessionReplaySessionReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySession: "%T"`, v)
+	}
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type GetReplaySessionReplaySessionReplaySessionHttp struct {
+	Typename    *string                                                                         `json:"__typename"`
+	Id          string                                                                          `json:"id"`
+	Name        string                                                                          `json:"name"`
+	ActiveEntry *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry           `json:"-"`
+	Collection  GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection `json:"collection"`
+	Settings    *GetReplaySessionReplaySessionReplaySessionHttpSettings                         `json:"settings"`
+	Entries     GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection      `json:"entries"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetTypename() *string { return v.Typename }
+
+// GetId returns GetReplaySessionReplaySessionReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetId() string { return v.Id }
+
+// GetName returns GetReplaySessionReplaySessionReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetName() string { return v.Name }
+
+// GetActiveEntry returns GetReplaySessionReplaySessionReplaySessionHttp.ActiveEntry, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetActiveEntry() *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry {
 	return v.ActiveEntry
 }
 
-// GetCollection returns GetReplaySessionReplaySession.Collection, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySession) GetCollection() GetReplaySessionReplaySessionCollection {
+// GetCollection returns GetReplaySessionReplaySessionReplaySessionHttp.Collection, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetCollection() GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection {
 	return v.Collection
 }
 
-// GetEntries returns GetReplaySessionReplaySession.Entries, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySession) GetEntries() GetReplaySessionReplaySessionEntriesReplayEntryConnection {
+// GetSettings returns GetReplaySessionReplaySessionReplaySessionHttp.Settings, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetSettings() *GetReplaySessionReplaySessionReplaySessionHttpSettings {
+	return v.Settings
+}
+
+// GetEntries returns GetReplaySessionReplaySessionReplaySessionHttp.Entries, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) GetEntries() GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection {
 	return v.Entries
 }
 
-// GetReplaySessionReplaySessionActiveEntryReplayEntry includes the requested fields of the GraphQL type ReplayEntry.
-type GetReplaySessionReplaySessionActiveEntryReplayEntry struct {
-	Id string `json:"id"`
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*GetReplaySessionReplaySessionReplaySessionHttp
+		ActiveEntry json.RawMessage `json:"activeEntry"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.GetReplaySessionReplaySessionReplaySessionHttp = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.ActiveEntry
+		src := firstPass.ActiveEntry
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry)
+			err = __unmarshalGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal GetReplaySessionReplaySessionReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns GetReplaySessionReplaySessionActiveEntryReplayEntry.Id, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionActiveEntryReplayEntry) GetId() string { return v.Id }
+type __premarshalGetReplaySessionReplaySessionReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
 
-// GetReplaySessionReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
-type GetReplaySessionReplaySessionCollection struct {
+	Id string `json:"id"`
+
+	Name string `json:"name"`
+
+	ActiveEntry json.RawMessage `json:"activeEntry"`
+
+	Collection GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection `json:"collection"`
+
+	Settings *GetReplaySessionReplaySessionReplaySessionHttpSettings `json:"settings"`
+
+	Entries GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection `json:"entries"`
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttp) __premarshalJSON() (*__premarshalGetReplaySessionReplaySessionReplaySessionHttp, error) {
+	var retval __premarshalGetReplaySessionReplaySessionReplaySessionHttp
+
+	retval.Typename = v.Typename
+	retval.Id = v.Id
+	retval.Name = v.Name
+	{
+
+		dst := &retval.ActiveEntry
+		src := v.ActiveEntry
+		if src != nil {
+			var err error
+			*dst, err = __marshalGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal GetReplaySessionReplaySessionReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	retval.Collection = v.Collection
+	retval.Settings = v.Settings
+	retval.Entries = v.Entries
+	return &retval, nil
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry is implemented by the following types:
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs
+type GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry interface {
+	implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp) implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry() {
+}
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs) implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry() {
+}
+
+func __unmarshalGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry(b []byte, v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalGetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry(v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntry: "%T"`, v)
+	}
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryHttp) GetId() string {
+	return v.Id
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpActiveEntryReplayEntryWs) GetId() string {
+	return v.Id
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
+type GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// GetId returns GetReplaySessionReplaySessionCollection.Id, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionCollection) GetId() string { return v.Id }
-
-// GetName returns GetReplaySessionReplaySessionCollection.Name, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionCollection) GetName() string { return v.Name }
-
-// GetReplaySessionReplaySessionEntriesReplayEntryConnection includes the requested fields of the GraphQL type ReplayEntryConnection.
-type GetReplaySessionReplaySessionEntriesReplayEntryConnection struct {
-	// A list of edges.
-	Edges []GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge `json:"edges"`
-	// Information to aid in pagination.
-	PageInfo GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo `json:"pageInfo"`
-}
-
-// GetEdges returns GetReplaySessionReplaySessionEntriesReplayEntryConnection.Edges, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnection) GetEdges() []GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge {
-	return v.Edges
-}
-
-// GetPageInfo returns GetReplaySessionReplaySessionEntriesReplayEntryConnection.PageInfo, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnection) GetPageInfo() GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo {
-	return v.PageInfo
-}
-
-// GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge includes the requested fields of the GraphQL type ReplayEntryEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
-type GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge struct {
-	// The item at the end of the edge
-	Node GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry `json:"node"`
-}
-
-// GetNode returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge.Node, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdge) GetNode() GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry {
-	return v.Node
-}
-
-// GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry includes the requested fields of the GraphQL type ReplayEntry.
-type GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry struct {
-	Id         string                                                                                                               `json:"id"`
-	Raw        string                                                                                                               `json:"raw"`
-	Connection GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo `json:"connection"`
-}
-
-// GetId returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry.Id, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry) GetId() string {
+// GetId returns GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection) GetId() string {
 	return v.Id
 }
 
-// GetRaw returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry.Raw, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry) GetRaw() string {
+// GetName returns GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection.Name, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpCollectionReplaySessionCollection) GetName() string {
+	return v.Name
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection includes the requested fields of the GraphQL type ReplayEntryConnection.
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection struct {
+	// A list of edges.
+	Edges []GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge `json:"edges"`
+	// Information to aid in pagination.
+	PageInfo GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo `json:"pageInfo"`
+}
+
+// GetEdges returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection.Edges, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection) GetEdges() []GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge {
+	return v.Edges
+}
+
+// GetPageInfo returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection.PageInfo, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnection) GetPageInfo() GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo {
+	return v.PageInfo
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge includes the requested fields of the GraphQL type ReplayEntryEdge.
+// The GraphQL type's documentation follows.
+//
+// An edge in a connection.
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge struct {
+	// The item at the end of the edge
+	Node GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry `json:"-"`
+}
+
+// GetNode returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge.Node, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge) GetNode() GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry {
+	return v.Node
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge
+		Node json.RawMessage `json:"node"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Node
+		src := firstPass.Node
+		if len(src) != 0 && string(src) != "null" {
+			err = __unmarshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry(
+				src, dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge.Node: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge struct {
+	Node json.RawMessage `json:"node"`
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge) __premarshalJSON() (*__premarshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge, error) {
+	var retval __premarshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge
+
+	{
+
+		dst := &retval.Node
+		src := v.Node
+		var err error
+		*dst, err = __marshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry(
+			&src)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"unable to marshal GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdge.Node: %w", err)
+		}
+	}
+	return &retval, nil
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry is implemented by the following types:
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry interface {
+	implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+}
+
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp) implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry() {
+}
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs) implementsGraphQLInterfaceGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry() {
+}
+
+func __unmarshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry(b []byte, v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalGetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry(v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry: "%T"`, v)
+	}
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp struct {
+	Typename   *string                                                                                                                                   `json:"__typename"`
+	Id         string                                                                                                                                    `json:"id"`
+	Raw        string                                                                                                                                    `json:"raw"`
+	Connection GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo `json:"connection"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp) GetId() string {
+	return v.Id
+}
+
+// GetRaw returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp.Raw, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp) GetRaw() string {
 	return v.Raw
 }
 
-// GetConnection returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry.Connection, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntry) GetConnection() GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo {
+// GetConnection returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp.Connection, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttp) GetConnection() GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo {
 	return v.Connection
 }
 
-// GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo includes the requested fields of the GraphQL type ConnectionInfo.
-type GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo struct {
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo includes the requested fields of the GraphQL type ConnectionInfo.
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo struct {
 	Host  string `json:"host"`
 	Port  int    `json:"port"`
 	IsTLS bool   `json:"isTLS"`
 }
 
-// GetHost returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo.Host, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo) GetHost() string {
+// GetHost returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo.Host, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo) GetHost() string {
 	return v.Host
 }
 
-// GetPort returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo.Port, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo) GetPort() int {
+// GetPort returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo.Port, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo) GetPort() int {
 	return v.Port
 }
 
-// GetIsTLS returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo.IsTLS, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryConnectionConnectionInfo) GetIsTLS() bool {
+// GetIsTLS returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo.IsTLS, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryHttpConnectionConnectionInfo) GetIsTLS() bool {
 	return v.IsTLS
 }
 
-// GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo includes the requested fields of the GraphQL type PageInfo.
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionEdgesReplayEntryEdgeNodeReplayEntryWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo includes the requested fields of the GraphQL type PageInfo.
 // The GraphQL type's documentation follows.
 //
 // Information about pagination in a connection
-type GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo struct {
+type GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo struct {
 	// When paginating forwards, are there more items?
 	HasNextPage bool `json:"hasNextPage"`
 	// When paginating forwards, the cursor to continue.
 	EndCursor *string `json:"endCursor"`
 }
 
-// GetHasNextPage returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo.HasNextPage, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo) GetHasNextPage() bool {
+// GetHasNextPage returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo.HasNextPage, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo) GetHasNextPage() bool {
 	return v.HasNextPage
 }
 
-// GetEndCursor returns GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo.EndCursor, and is useful for accessing the field via an interface.
-func (v *GetReplaySessionReplaySessionEntriesReplayEntryConnectionPageInfo) GetEndCursor() *string {
+// GetEndCursor returns GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo.EndCursor, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpEntriesReplayEntryConnectionPageInfo) GetEndCursor() *string {
 	return v.EndCursor
 }
 
+// GetReplaySessionReplaySessionReplaySessionHttpSettings includes the requested fields of the GraphQL type ReplaySessionHttpSettings.
+type GetReplaySessionReplaySessionReplaySessionHttpSettings struct {
+	ConnectionClose     bool `json:"connectionClose"`
+	UpdateContentLength bool `json:"updateContentLength"`
+}
+
+// GetConnectionClose returns GetReplaySessionReplaySessionReplaySessionHttpSettings.ConnectionClose, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpSettings) GetConnectionClose() bool {
+	return v.ConnectionClose
+}
+
+// GetUpdateContentLength returns GetReplaySessionReplaySessionReplaySessionHttpSettings.UpdateContentLength, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionHttpSettings) GetUpdateContentLength() bool {
+	return v.UpdateContentLength
+}
+
+// GetReplaySessionReplaySessionReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type GetReplaySessionReplaySessionReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns GetReplaySessionReplaySessionReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionWs) GetTypename() *string { return v.Typename }
+
+// GetId returns GetReplaySessionReplaySessionReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionWs) GetId() string { return v.Id }
+
+// GetName returns GetReplaySessionReplaySessionReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *GetReplaySessionReplaySessionReplaySessionWs) GetName() string { return v.Name }
+
 // GetReplaySessionResponse is returned by GetReplaySession on success.
 type GetReplaySessionResponse struct {
-	ReplaySession *GetReplaySessionReplaySession `json:"replaySession"`
+	ReplaySession *GetReplaySessionReplaySession `json:"-"`
 }
 
 // GetReplaySession returns GetReplaySessionResponse.ReplaySession, and is useful for accessing the field via an interface.
 func (v *GetReplaySessionResponse) GetReplaySession() *GetReplaySessionReplaySession {
 	return v.ReplaySession
+}
+
+func (v *GetReplaySessionResponse) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*GetReplaySessionResponse
+		ReplaySession json.RawMessage `json:"replaySession"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.GetReplaySessionResponse = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.ReplaySession
+		src := firstPass.ReplaySession
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(GetReplaySessionReplaySession)
+			err = __unmarshalGetReplaySessionReplaySession(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal GetReplaySessionResponse.ReplaySession: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalGetReplaySessionResponse struct {
+	ReplaySession json.RawMessage `json:"replaySession"`
+}
+
+func (v *GetReplaySessionResponse) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *GetReplaySessionResponse) __premarshalJSON() (*__premarshalGetReplaySessionResponse, error) {
+	var retval __premarshalGetReplaySessionResponse
+
+	{
+
+		dst := &retval.ReplaySession
+		src := v.ReplaySession
+		if src != nil {
+			var err error
+			*dst, err = __marshalGetReplaySessionReplaySession(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal GetReplaySessionResponse.ReplaySession: %w", err)
+			}
+		}
+	}
+	return &retval, nil
 }
 
 // GetRequestMetadataRequest includes the requested fields of the GraphQL type Request.
@@ -5520,6 +6616,54 @@ func (v *GetSitemapEntrySitemapEntry) GetParentId() *string { return v.ParentId 
 
 // GetHasDescendants returns GetSitemapEntrySitemapEntry.HasDescendants, and is useful for accessing the field via an interface.
 func (v *GetSitemapEntrySitemapEntry) GetHasDescendants() bool { return v.HasDescendants }
+
+// GetStreamResponse is returned by GetStream on success.
+type GetStreamResponse struct {
+	Stream *GetStreamStream `json:"stream"`
+}
+
+// GetStream returns GetStreamResponse.Stream, and is useful for accessing the field via an interface.
+func (v *GetStreamResponse) GetStream() *GetStreamStream { return v.Stream }
+
+// GetStreamStream includes the requested fields of the GraphQL type Stream.
+type GetStreamStream struct {
+	Id        string          `json:"id"`
+	Host      string          `json:"host"`
+	Port      int             `json:"port"`
+	Path      string          `json:"path"`
+	IsTls     bool            `json:"isTls"`
+	Direction StreamDirection `json:"direction"`
+	Source    Source          `json:"source"`
+	Protocol  StreamProtocol  `json:"protocol"`
+	CreatedAt int64           `json:"createdAt"`
+}
+
+// GetId returns GetStreamStream.Id, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetId() string { return v.Id }
+
+// GetHost returns GetStreamStream.Host, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetHost() string { return v.Host }
+
+// GetPort returns GetStreamStream.Port, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetPort() int { return v.Port }
+
+// GetPath returns GetStreamStream.Path, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetPath() string { return v.Path }
+
+// GetIsTls returns GetStreamStream.IsTls, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetIsTls() bool { return v.IsTls }
+
+// GetDirection returns GetStreamStream.Direction, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetDirection() StreamDirection { return v.Direction }
+
+// GetSource returns GetStreamStream.Source, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetSource() Source { return v.Source }
+
+// GetProtocol returns GetStreamStream.Protocol, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetProtocol() StreamProtocol { return v.Protocol }
+
+// GetCreatedAt returns GetStreamStream.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetStreamStream) GetCreatedAt() int64 { return v.CreatedAt }
 
 // GetTamperRuleResponse is returned by GetTamperRule on success.
 type GetTamperRuleResponse struct {
@@ -7898,7 +9042,7 @@ func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollec
 type ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection struct {
 	Id       string                                                                                                                                                                  `json:"id"`
 	Name     string                                                                                                                                                                  `json:"name"`
-	Sessions []ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession `json:"sessions"`
+	Sessions []ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession `json:"-"`
 }
 
 // GetId returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection.Id, and is useful for accessing the field via an interface.
@@ -7916,19 +9060,205 @@ func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollec
 	return v.Sessions
 }
 
-// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection
+		Sessions []json.RawMessage `json:"sessions"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Sessions
+		src := firstPass.Sessions
+		*dst = make(
+			[]ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession,
+			len(src))
+		for i, src := range src {
+			dst := &(*dst)[i]
+			if len(src) != 0 && string(src) != "null" {
+				err = __unmarshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession(
+					src, dst)
+				if err != nil {
+					return fmt.Errorf(
+						"unable to unmarshal ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection.Sessions: %w", err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession) GetId() string {
+type __premarshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection struct {
+	Id string `json:"id"`
+
+	Name string `json:"name"`
+
+	Sessions []json.RawMessage `json:"sessions"`
+}
+
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection) __premarshalJSON() (*__premarshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection, error) {
+	var retval __premarshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection
+
+	retval.Id = v.Id
+	retval.Name = v.Name
+	{
+
+		dst := &retval.Sessions
+		src := v.Sessions
+		*dst = make(
+			[]json.RawMessage,
+			len(src))
+		for i, src := range src {
+			dst := &(*dst)[i]
+			var err error
+			*dst, err = __marshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession(
+				&src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollection.Sessions: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession is implemented by the following types:
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs
+type ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession interface {
+	implementsGraphQLInterfaceListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp) implementsGraphQLInterfaceListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession() {
+}
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs) implementsGraphQLInterfaceListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession() {
+}
+
+func __unmarshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession(b []byte, v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession(v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession: "%T"`, v)
+	}
+}
+
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp) GetId() string {
 	return v.Id
 }
 
-// GetName returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySession) GetName() string {
+// GetName returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionHttp) GetName() string {
+	return v.Name
+}
+
+// ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs) GetId() string {
+	return v.Id
+}
+
+// GetName returns ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionCollectionsReplaySessionCollectionsReplaySessionCollectionConnectionEdgesReplaySessionCollectionEdgeNodeReplaySessionCollectionSessionsReplaySessionWs) GetName() string {
 	return v.Name
 }
 
@@ -8017,7 +9347,7 @@ type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEd
 	// A cursor for use in pagination
 	Cursor string `json:"cursor"`
 	// The item at the end of the edge
-	Node ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession `json:"node"`
+	Node ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession `json:"-"`
 }
 
 // GetCursor returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge.Cursor, and is useful for accessing the field via an interface.
@@ -8030,57 +9360,407 @@ func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessi
 	return v.Node
 }
 
-// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession struct {
-	Id          string                                                                                                                `json:"id"`
-	Name        string                                                                                                                `json:"name"`
-	ActiveEntry *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry `json:"activeEntry"`
-	Collection  ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection              `json:"collection"`
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge
+		Node json.RawMessage `json:"node"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Node
+		src := firstPass.Node
+		if len(src) != 0 && string(src) != "null" {
+			err = __unmarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession(
+				src, dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge.Node: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) GetId() string {
+type __premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge struct {
+	Cursor string `json:"cursor"`
+
+	Node json.RawMessage `json:"node"`
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge) __premarshalJSON() (*__premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge, error) {
+	var retval __premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge
+
+	retval.Cursor = v.Cursor
+	{
+
+		dst := &retval.Node
+		src := v.Node
+		var err error
+		*dst, err = __marshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession(
+			&src)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"unable to marshal ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdge.Node: %w", err)
+		}
+	}
+	return &retval, nil
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession is implemented by the following types:
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession interface {
+	implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession() {
+}
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs) implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession() {
+}
+
+func __unmarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession(b []byte, v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession(v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		premarshaled, err := v.__premarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		result := struct {
+			TypeName string `json:"__typename"`
+			*__premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp
+		}{typename, premarshaled}
+		return json.Marshal(result)
+	case *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession: "%T"`, v)
+	}
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp struct {
+	Typename    *string                                                                                                                             `json:"__typename"`
+	Id          string                                                                                                                              `json:"id"`
+	Name        string                                                                                                                              `json:"name"`
+	ActiveEntry *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry           `json:"-"`
+	Collection  ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection `json:"collection"`
+}
+
+// GetTypename returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) GetId() string {
 	return v.Id
 }
 
-// GetName returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) GetName() string {
+// GetName returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) GetName() string {
 	return v.Name
 }
 
-// GetActiveEntry returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession.ActiveEntry, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) GetActiveEntry() *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry {
+// GetActiveEntry returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.ActiveEntry, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) GetActiveEntry() *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry {
 	return v.ActiveEntry
 }
 
-// GetCollection returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession.Collection, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySession) GetCollection() ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection {
+// GetCollection returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.Collection, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) GetCollection() ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection {
 	return v.Collection
 }
 
-// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry includes the requested fields of the GraphQL type ReplayEntry.
-type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry struct {
-	Id string `json:"id"`
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp
+		ActiveEntry json.RawMessage `json:"activeEntry"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.ActiveEntry
+		src := firstPass.ActiveEntry
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry)
+			err = __unmarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry.Id, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionActiveEntryReplayEntry) GetId() string {
+type __premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
+
+	Id string `json:"id"`
+
+	Name string `json:"name"`
+
+	ActiveEntry json.RawMessage `json:"activeEntry"`
+
+	Collection ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection `json:"collection"`
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp) __premarshalJSON() (*__premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp, error) {
+	var retval __premarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp
+
+	retval.Typename = v.Typename
+	retval.Id = v.Id
+	retval.Name = v.Name
+	{
+
+		dst := &retval.ActiveEntry
+		src := v.ActiveEntry
+		if src != nil {
+			var err error
+			*dst, err = __marshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttp.ActiveEntry: %w", err)
+			}
+		}
+	}
+	retval.Collection = v.Collection
+	return &retval, nil
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry is implemented by the following types:
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry interface {
+	implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+}
+
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp) implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry() {
+}
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs) implementsGraphQLInterfaceListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry() {
+}
+
+func __unmarshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry(b []byte, v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry(v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntry: "%T"`, v)
+	}
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryHttp) GetId() string {
 	return v.Id
 }
 
-// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
-type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection struct {
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpActiveEntryReplayEntryWs) GetId() string {
+	return v.Id
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection.Id, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection) GetId() string {
+// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection) GetId() string {
 	return v.Id
 }
 
-// GetName returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection.Name, and is useful for accessing the field via an interface.
-func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionCollection) GetName() string {
+// GetName returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection.Name, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionHttpCollectionReplaySessionCollection) GetName() string {
+	return v.Name
+}
+
+// ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs) GetId() string {
+	return v.Id
+}
+
+// GetName returns ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *ListReplaySessionsReplaySessionsReplaySessionConnectionEdgesReplaySessionEdgeNodeReplaySessionWs) GetName() string {
 	return v.Name
 }
 
@@ -8769,6 +10449,274 @@ func (v *ListSitemapRootEntriesSitemapRootEntriesSitemapEntryConnectionEdgesSite
 	return v.HasDescendants
 }
 
+// ListStreamWsMessagesResponse is returned by ListStreamWsMessages on success.
+type ListStreamWsMessagesResponse struct {
+	StreamWsMessages ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection `json:"streamWsMessages"`
+}
+
+// GetStreamWsMessages returns ListStreamWsMessagesResponse.StreamWsMessages, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesResponse) GetStreamWsMessages() ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection {
+	return v.StreamWsMessages
+}
+
+// ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection includes the requested fields of the GraphQL type StreamWsMessageConnection.
+type ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection struct {
+	// A list of edges.
+	Edges []ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge `json:"edges"`
+	// Information to aid in pagination.
+	PageInfo ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo `json:"pageInfo"`
+}
+
+// GetEdges returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection) GetEdges() []ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge {
+	return v.Edges
+}
+
+// GetPageInfo returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection.PageInfo, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnection) GetPageInfo() ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo {
+	return v.PageInfo
+}
+
+// ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge includes the requested fields of the GraphQL type StreamWsMessageEdge.
+// The GraphQL type's documentation follows.
+//
+// An edge in a connection.
+type ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge struct {
+	// A cursor for use in pagination
+	Cursor string `json:"cursor"`
+	// The item at the end of the edge
+	Node ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage `json:"node"`
+}
+
+// GetCursor returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge.Cursor, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge) GetCursor() string {
+	return v.Cursor
+}
+
+// GetNode returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdge) GetNode() ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage {
+	return v.Node
+}
+
+// ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage includes the requested fields of the GraphQL type StreamWsMessage.
+type ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage struct {
+	Id   string                                                                                                                          `json:"id"`
+	Head ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit `json:"head"`
+}
+
+// GetId returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage.Id, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage) GetId() string {
+	return v.Id
+}
+
+// GetHead returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage.Head, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessage) GetHead() ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit {
+	return v.Head
+}
+
+// ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit includes the requested fields of the GraphQL type StreamWsMessageEdit.
+type ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit struct {
+	Id         string                 `json:"id"`
+	Direction  StreamMessageDirection `json:"direction"`
+	Format     StreamWsMessageFormat  `json:"format"`
+	Length     int                    `json:"length"`
+	Raw        string                 `json:"raw"`
+	Alteration Alteration             `json:"alteration"`
+	CreatedAt  int64                  `json:"createdAt"`
+}
+
+// GetId returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Id, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetId() string {
+	return v.Id
+}
+
+// GetDirection returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Direction, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetDirection() StreamMessageDirection {
+	return v.Direction
+}
+
+// GetFormat returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Format, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetFormat() StreamWsMessageFormat {
+	return v.Format
+}
+
+// GetLength returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Length, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetLength() int {
+	return v.Length
+}
+
+// GetRaw returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Raw, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetRaw() string {
+	return v.Raw
+}
+
+// GetAlteration returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.Alteration, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetAlteration() Alteration {
+	return v.Alteration
+}
+
+// GetCreatedAt returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit.CreatedAt, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionEdgesStreamWsMessageEdgeNodeStreamWsMessageHeadStreamWsMessageEdit) GetCreatedAt() int64 {
+	return v.CreatedAt
+}
+
+// ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo includes the requested fields of the GraphQL type PageInfo.
+// The GraphQL type's documentation follows.
+//
+// Information about pagination in a connection
+type ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo struct {
+	// When paginating forwards, are there more items?
+	HasNextPage bool `json:"hasNextPage"`
+	// When paginating backwards, are there more items?
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	// When paginating backwards, the cursor to continue.
+	StartCursor *string `json:"startCursor"`
+	// When paginating forwards, the cursor to continue.
+	EndCursor *string `json:"endCursor"`
+}
+
+// GetHasNextPage returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo.HasNextPage, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo) GetHasNextPage() bool {
+	return v.HasNextPage
+}
+
+// GetHasPreviousPage returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo.HasPreviousPage, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo) GetHasPreviousPage() bool {
+	return v.HasPreviousPage
+}
+
+// GetStartCursor returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo.StartCursor, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo) GetStartCursor() *string {
+	return v.StartCursor
+}
+
+// GetEndCursor returns ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo.EndCursor, and is useful for accessing the field via an interface.
+func (v *ListStreamWsMessagesStreamWsMessagesStreamWsMessageConnectionPageInfo) GetEndCursor() *string {
+	return v.EndCursor
+}
+
+// ListStreamsResponse is returned by ListStreams on success.
+type ListStreamsResponse struct {
+	Streams ListStreamsStreamsStreamConnection `json:"streams"`
+}
+
+// GetStreams returns ListStreamsResponse.Streams, and is useful for accessing the field via an interface.
+func (v *ListStreamsResponse) GetStreams() ListStreamsStreamsStreamConnection { return v.Streams }
+
+// ListStreamsStreamsStreamConnection includes the requested fields of the GraphQL type StreamConnection.
+type ListStreamsStreamsStreamConnection struct {
+	// A list of edges.
+	Edges []ListStreamsStreamsStreamConnectionEdgesStreamEdge `json:"edges"`
+	// Information to aid in pagination.
+	PageInfo ListStreamsStreamsStreamConnectionPageInfo `json:"pageInfo"`
+}
+
+// GetEdges returns ListStreamsStreamsStreamConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnection) GetEdges() []ListStreamsStreamsStreamConnectionEdgesStreamEdge {
+	return v.Edges
+}
+
+// GetPageInfo returns ListStreamsStreamsStreamConnection.PageInfo, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnection) GetPageInfo() ListStreamsStreamsStreamConnectionPageInfo {
+	return v.PageInfo
+}
+
+// ListStreamsStreamsStreamConnectionEdgesStreamEdge includes the requested fields of the GraphQL type StreamEdge.
+// The GraphQL type's documentation follows.
+//
+// An edge in a connection.
+type ListStreamsStreamsStreamConnectionEdgesStreamEdge struct {
+	// A cursor for use in pagination
+	Cursor string `json:"cursor"`
+	// The item at the end of the edge
+	Node ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream `json:"node"`
+}
+
+// GetCursor returns ListStreamsStreamsStreamConnectionEdgesStreamEdge.Cursor, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdge) GetCursor() string { return v.Cursor }
+
+// GetNode returns ListStreamsStreamsStreamConnectionEdgesStreamEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdge) GetNode() ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream {
+	return v.Node
+}
+
+// ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream includes the requested fields of the GraphQL type Stream.
+type ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream struct {
+	Id        string          `json:"id"`
+	Host      string          `json:"host"`
+	Port      int             `json:"port"`
+	Path      string          `json:"path"`
+	IsTls     bool            `json:"isTls"`
+	Direction StreamDirection `json:"direction"`
+	Source    Source          `json:"source"`
+	Protocol  StreamProtocol  `json:"protocol"`
+	CreatedAt int64           `json:"createdAt"`
+}
+
+// GetId returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Id, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetId() string { return v.Id }
+
+// GetHost returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Host, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetHost() string { return v.Host }
+
+// GetPort returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Port, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetPort() int { return v.Port }
+
+// GetPath returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Path, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetPath() string { return v.Path }
+
+// GetIsTls returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.IsTls, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetIsTls() bool { return v.IsTls }
+
+// GetDirection returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Direction, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetDirection() StreamDirection {
+	return v.Direction
+}
+
+// GetSource returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Source, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetSource() Source {
+	return v.Source
+}
+
+// GetProtocol returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.Protocol, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetProtocol() StreamProtocol {
+	return v.Protocol
+}
+
+// GetCreatedAt returns ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream.CreatedAt, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionEdgesStreamEdgeNodeStream) GetCreatedAt() int64 {
+	return v.CreatedAt
+}
+
+// ListStreamsStreamsStreamConnectionPageInfo includes the requested fields of the GraphQL type PageInfo.
+// The GraphQL type's documentation follows.
+//
+// Information about pagination in a connection
+type ListStreamsStreamsStreamConnectionPageInfo struct {
+	// When paginating forwards, are there more items?
+	HasNextPage bool `json:"hasNextPage"`
+	// When paginating backwards, are there more items?
+	HasPreviousPage bool `json:"hasPreviousPage"`
+	// When paginating backwards, the cursor to continue.
+	StartCursor *string `json:"startCursor"`
+	// When paginating forwards, the cursor to continue.
+	EndCursor *string `json:"endCursor"`
+}
+
+// GetHasNextPage returns ListStreamsStreamsStreamConnectionPageInfo.HasNextPage, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionPageInfo) GetHasNextPage() bool { return v.HasNextPage }
+
+// GetHasPreviousPage returns ListStreamsStreamsStreamConnectionPageInfo.HasPreviousPage, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionPageInfo) GetHasPreviousPage() bool {
+	return v.HasPreviousPage
+}
+
+// GetStartCursor returns ListStreamsStreamsStreamConnectionPageInfo.StartCursor, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionPageInfo) GetStartCursor() *string { return v.StartCursor }
+
+// GetEndCursor returns ListStreamsStreamsStreamConnectionPageInfo.EndCursor, and is useful for accessing the field via an interface.
+func (v *ListStreamsStreamsStreamConnectionPageInfo) GetEndCursor() *string { return v.EndCursor }
+
 // ListTamperRuleCollectionsResponse is returned by ListTamperRuleCollections on success.
 type ListTamperRuleCollectionsResponse struct {
 	TamperRuleCollections []ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollection `json:"tamperRuleCollections"`
@@ -9078,6 +11026,8 @@ func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRules
 // ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseFirstLine
 // ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseHeader
 // ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseStatusCode
+// ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream
+// ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream
 type ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection interface {
 	implementsGraphQLInterfaceListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection()
 	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
@@ -9109,6 +11059,10 @@ func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRules
 func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseHeader) implementsGraphQLInterfaceListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection() {
 }
 func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseStatusCode) implementsGraphQLInterfaceListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection() {
+}
+func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream) implementsGraphQLInterfaceListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection() {
+}
+func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream) implementsGraphQLInterfaceListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection() {
 }
 
 func __unmarshalListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection(b []byte, v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSection) error {
@@ -9163,6 +11117,12 @@ func __unmarshalListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollecti
 		return json.Unmarshal(b, *v)
 	case "TamperSectionResponseStatusCode":
 		*v = new(ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseStatusCode)
+		return json.Unmarshal(b, *v)
+	case "TamperSectionStreamWsMessageDownstream":
+		*v = new(ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream)
+		return json.Unmarshal(b, *v)
+	case "TamperSectionStreamWsMessageUpstream":
+		*v = new(ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream)
 		return json.Unmarshal(b, *v)
 	case "":
 		return fmt.Errorf(
@@ -9332,6 +11292,22 @@ func __marshalListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollection
 			TypeName string `json:"__typename"`
 			*__premarshalListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionResponseStatusCode
 		}{typename, premarshaled}
+		return json.Marshal(result)
+	case *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream:
+		typename = "TamperSectionStreamWsMessageDownstream"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream
+		}{typename, v}
+		return json.Marshal(result)
+	case *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream:
+		typename = "TamperSectionStreamWsMessageUpstream"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream
+		}{typename, v}
 		return json.Marshal(result)
 	case nil:
 		return []byte("null"), nil
@@ -14452,6 +16428,26 @@ func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRules
 	return v.Typename
 }
 
+// ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream includes the requested fields of the GraphQL type TamperSectionStreamWsMessageDownstream.
+type ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream.Typename, and is useful for accessing the field via an interface.
+func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageDownstream) GetTypename() *string {
+	return v.Typename
+}
+
+// ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream includes the requested fields of the GraphQL type TamperSectionStreamWsMessageUpstream.
+type ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream.Typename, and is useful for accessing the field via an interface.
+func (v *ListTamperRuleCollectionsTamperRuleCollectionsTamperRuleCollectionRulesTamperRuleSectionTamperSectionStreamWsMessageUpstream) GetTypename() *string {
+	return v.Typename
+}
+
 // ListTasksResponse is returned by ListTasks on success.
 type ListTasksResponse struct {
 	Tasks []ListTasksTasksTask `json:"-"`
@@ -15008,9 +17004,225 @@ func (v *LocalizeWorkflowResponse) GetLocalizeWorkflow() LocalizeWorkflowLocaliz
 	return v.LocalizeWorkflow
 }
 
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayload includes the requested fields of the GraphQL type GuestAuthenticationPayload.
+type LoginAsGuestLoginAsGuestGuestAuthenticationPayload struct {
+	Token *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken      `json:"token"`
+	Error *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError `json:"-"`
+}
+
+// GetToken returns LoginAsGuestLoginAsGuestGuestAuthenticationPayload.Token, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayload) GetToken() *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken {
+	return v.Token
+}
+
+// GetError returns LoginAsGuestLoginAsGuestGuestAuthenticationPayload.Error, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayload) GetError() *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError {
+	return v.Error
+}
+
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*LoginAsGuestLoginAsGuestGuestAuthenticationPayload
+		Error json.RawMessage `json:"error"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.LoginAsGuestLoginAsGuestGuestAuthenticationPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Error
+		src := firstPass.Error
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError)
+			err = __unmarshalLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal LoginAsGuestLoginAsGuestGuestAuthenticationPayload.Error: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalLoginAsGuestLoginAsGuestGuestAuthenticationPayload struct {
+	Token *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken `json:"token"`
+
+	Error json.RawMessage `json:"error"`
+}
+
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayload) __premarshalJSON() (*__premarshalLoginAsGuestLoginAsGuestGuestAuthenticationPayload, error) {
+	var retval __premarshalLoginAsGuestLoginAsGuestGuestAuthenticationPayload
+
+	retval.Token = v.Token
+	{
+
+		dst := &retval.Error
+		src := v.Error
+		if src != nil {
+			var err error
+			*dst, err = __marshalLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal LoginAsGuestLoginAsGuestGuestAuthenticationPayload.Error: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError includes the requested fields of the GraphQL interface GuestAuthenticationError.
+//
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError is implemented by the following types:
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError
+type LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError interface {
+	implementsGraphQLInterfaceLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+}
+
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError) implementsGraphQLInterfaceLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError() {
+}
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError) implementsGraphQLInterfaceLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError() {
+}
+
+func __unmarshalLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError(b []byte, v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "OtherUserError":
+		*v = new(LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError)
+		return json.Unmarshal(b, *v)
+	case "PermissionDeniedUserError":
+		*v = new(LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing GuestAuthenticationError.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalLoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError(v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError:
+		typename = "OtherUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError
+		}{typename, v}
+		return json.Marshal(result)
+	case *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError:
+		typename = "PermissionDeniedUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorGuestAuthenticationError: "%T"`, v)
+	}
+}
+
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError includes the requested fields of the GraphQL type OtherUserError.
+type LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError.Typename, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorOtherUserError) GetTypename() *string {
+	return v.Typename
+}
+
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError includes the requested fields of the GraphQL type PermissionDeniedUserError.
+type LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError.Typename, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadErrorPermissionDeniedUserError) GetTypename() *string {
+	return v.Typename
+}
+
+// LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken includes the requested fields of the GraphQL type AuthenticationToken.
+type LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken struct {
+	AccessToken  string                `json:"accessToken"`
+	RefreshToken *string               `json:"refreshToken"`
+	ExpiresAt    string                `json:"expiresAt"`
+	Scopes       []AuthenticationScope `json:"scopes"`
+}
+
+// GetAccessToken returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken.AccessToken, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken) GetAccessToken() string {
+	return v.AccessToken
+}
+
+// GetRefreshToken returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken.RefreshToken, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken) GetRefreshToken() *string {
+	return v.RefreshToken
+}
+
+// GetExpiresAt returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken.ExpiresAt, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken) GetExpiresAt() string {
+	return v.ExpiresAt
+}
+
+// GetScopes returns LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken.Scopes, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestLoginAsGuestGuestAuthenticationPayloadTokenAuthenticationToken) GetScopes() []AuthenticationScope {
+	return v.Scopes
+}
+
+// LoginAsGuestResponse is returned by LoginAsGuest on success.
+type LoginAsGuestResponse struct {
+	LoginAsGuest LoginAsGuestLoginAsGuestGuestAuthenticationPayload `json:"loginAsGuest"`
+}
+
+// GetLoginAsGuest returns LoginAsGuestResponse.LoginAsGuest, and is useful for accessing the field via an interface.
+func (v *LoginAsGuestResponse) GetLoginAsGuest() LoginAsGuestLoginAsGuestGuestAuthenticationPayload {
+	return v.LoginAsGuest
+}
+
 // MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload includes the requested fields of the GraphQL type MoveReplaySessionPayload.
 type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload struct {
-	Session *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession `json:"session"`
+	Session *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession `json:"-"`
 }
 
 // GetSession returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload.Session, and is useful for accessing the field via an interface.
@@ -15018,41 +17230,212 @@ func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload) GetSession(
 	return v.Session
 }
 
-// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession struct {
-	Id         string                                                                                   `json:"id"`
-	Name       string                                                                                   `json:"name"`
-	Collection MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection `json:"collection"`
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload
+		Session json.RawMessage `json:"session"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Session
+		src := firstPass.Session
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession)
+			err = __unmarshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession) GetId() string {
+type __premarshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayload struct {
+	Session json.RawMessage `json:"session"`
+}
+
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload) __premarshalJSON() (*__premarshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayload, error) {
+	var retval __premarshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayload
+
+	{
+
+		dst := &retval.Session
+		src := v.Session
+		if src != nil {
+			var err error
+			*dst, err = __marshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal MoveReplaySessionMoveReplaySessionMoveReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession is implemented by the following types:
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs
+type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession interface {
+	implementsGraphQLInterfaceMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp) implementsGraphQLInterfaceMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession() {
+}
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs) implementsGraphQLInterfaceMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession() {
+}
+
+func __unmarshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession(b []byte, v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalMoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession(v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession: "%T"`, v)
+	}
+}
+
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp struct {
+	Typename   *string                                                                                                             `json:"__typename"`
+	Id         string                                                                                                              `json:"id"`
+	Name       string                                                                                                              `json:"name"`
+	Collection MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection `json:"collection"`
+}
+
+// GetTypename returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp) GetId() string {
 	return v.Id
 }
 
-// GetName returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession) GetName() string {
+// GetName returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp) GetName() string {
 	return v.Name
 }
 
-// GetCollection returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession.Collection, and is useful for accessing the field via an interface.
-func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySession) GetCollection() MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection {
+// GetCollection returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp.Collection, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttp) GetCollection() MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection {
 	return v.Collection
 }
 
-// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
-type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection struct {
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection includes the requested fields of the GraphQL type ReplaySessionCollection.
+type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// GetId returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection.Id, and is useful for accessing the field via an interface.
-func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection) GetId() string {
+// GetId returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection.Id, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection) GetId() string {
 	return v.Id
 }
 
-// GetName returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection.Name, and is useful for accessing the field via an interface.
-func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionCollection) GetName() string {
+// GetName returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection.Name, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionHttpCollectionReplaySessionCollection) GetName() string {
+	return v.Name
+}
+
+// MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs) GetId() string {
+	return v.Id
+}
+
+// GetName returns MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *MoveReplaySessionMoveReplaySessionMoveReplaySessionPayloadSessionReplaySessionWs) GetName() string {
 	return v.Name
 }
 
@@ -15783,7 +18166,7 @@ func (v *RenameReplaySessionCollectionResponse) GetRenameReplaySessionCollection
 
 // RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload includes the requested fields of the GraphQL type RenameReplaySessionPayload.
 type RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload struct {
-	Session *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession `json:"session"`
+	Session *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession `json:"-"`
 }
 
 // GetSession returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload.Session, and is useful for accessing the field via an interface.
@@ -15791,19 +18174,190 @@ func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload) GetSe
 	return v.Session
 }
 
-// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL type ReplaySession.
-type RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload
+		Session json.RawMessage `json:"session"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Session
+		src := firstPass.Session
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession)
+			err = __unmarshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
-// GetId returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession.Id, and is useful for accessing the field via an interface.
-func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession) GetId() string {
+type __premarshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayload struct {
+	Session json.RawMessage `json:"session"`
+}
+
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload) __premarshalJSON() (*__premarshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayload, error) {
+	var retval __premarshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayload
+
+	{
+
+		dst := &retval.Session
+		src := v.Session
+		if src != nil {
+			var err error
+			*dst, err = __marshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal RenameReplaySessionRenameReplaySessionRenameReplaySessionPayload.Session: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession is implemented by the following types:
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs
+type RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession interface {
+	implementsGraphQLInterfaceRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+	// GetName returns the interface-field "name" from its implementation.
+	GetName() string
+}
+
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp) implementsGraphQLInterfaceRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession() {
+}
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs) implementsGraphQLInterfaceRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession() {
+}
+
+func __unmarshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession(b []byte, v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalRenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession(v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession: "%T"`, v)
+	}
+}
+
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp) GetId() string {
 	return v.Id
 }
 
-// GetName returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession.Name, and is useful for accessing the field via an interface.
-func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySession) GetName() string {
+// GetName returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp.Name, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionHttp) GetName() string {
+	return v.Name
+}
+
+// RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// GetTypename returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs) GetId() string {
+	return v.Id
+}
+
+// GetName returns RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs.Name, and is useful for accessing the field via an interface.
+func (v *RenameReplaySessionRenameReplaySessionRenameReplaySessionPayloadSessionReplaySessionWs) GetName() string {
 	return v.Name
 }
 
@@ -16079,20 +18633,21 @@ func (v *RenameWorkflowResponse) GetRenameWorkflow() RenameWorkflowRenameWorkflo
 	return v.RenameWorkflow
 }
 
-type ReplayEntrySettingsInput struct {
-	ConnectionClose     bool                     `json:"connectionClose"`
-	Placeholders        []ReplayPlaceholderInput `json:"placeholders"`
-	UpdateContentLength bool                     `json:"updateContentLength"`
+type ReplayEntryHttpSettingsInput struct {
+	Placeholders []ReplayPlaceholderInput `json:"placeholders"`
 }
 
-// GetConnectionClose returns ReplayEntrySettingsInput.ConnectionClose, and is useful for accessing the field via an interface.
-func (v *ReplayEntrySettingsInput) GetConnectionClose() bool { return v.ConnectionClose }
+// GetPlaceholders returns ReplayEntryHttpSettingsInput.Placeholders, and is useful for accessing the field via an interface.
+func (v *ReplayEntryHttpSettingsInput) GetPlaceholders() []ReplayPlaceholderInput {
+	return v.Placeholders
+}
 
-// GetPlaceholders returns ReplayEntrySettingsInput.Placeholders, and is useful for accessing the field via an interface.
-func (v *ReplayEntrySettingsInput) GetPlaceholders() []ReplayPlaceholderInput { return v.Placeholders }
+type ReplayEntryWsSettingsInput struct {
+	ServerTimeoutMs int `json:"serverTimeoutMs"`
+}
 
-// GetUpdateContentLength returns ReplayEntrySettingsInput.UpdateContentLength, and is useful for accessing the field via an interface.
-func (v *ReplayEntrySettingsInput) GetUpdateContentLength() bool { return v.UpdateContentLength }
+// GetServerTimeoutMs returns ReplayEntryWsSettingsInput.ServerTimeoutMs, and is useful for accessing the field via an interface.
+func (v *ReplayEntryWsSettingsInput) GetServerTimeoutMs() int { return v.ServerTimeoutMs }
 
 type ReplayEnvironmentPreprocessorInput struct {
 	VariableName string `json:"variableName"`
@@ -16158,6 +18713,36 @@ func (v *ReplayPreprocessorOptionsInput) GetUrlEncode() *ReplayUrlEncodePreproce
 func (v *ReplayPreprocessorOptionsInput) GetWorkflow() *ReplayWorkflowPreprocessorInput {
 	return v.Workflow
 }
+
+type ReplaySessionHttpSettingsInput struct {
+	ConnectionClose     bool `json:"connectionClose"`
+	UpdateContentLength bool `json:"updateContentLength"`
+}
+
+// GetConnectionClose returns ReplaySessionHttpSettingsInput.ConnectionClose, and is useful for accessing the field via an interface.
+func (v *ReplaySessionHttpSettingsInput) GetConnectionClose() bool { return v.ConnectionClose }
+
+// GetUpdateContentLength returns ReplaySessionHttpSettingsInput.UpdateContentLength, and is useful for accessing the field via an interface.
+func (v *ReplaySessionHttpSettingsInput) GetUpdateContentLength() bool { return v.UpdateContentLength }
+
+type ReplaySessionKind string
+
+const (
+	ReplaySessionKindHttp ReplaySessionKind = "HTTP"
+	ReplaySessionKindWs   ReplaySessionKind = "WS"
+)
+
+var AllReplaySessionKind = []ReplaySessionKind{
+	ReplaySessionKindHttp,
+	ReplaySessionKindWs,
+}
+
+type ReplaySessionSettingsInput struct {
+	Http *ReplaySessionHttpSettingsInput `json:"http"`
+}
+
+// GetHttp returns ReplaySessionSettingsInput.Http, and is useful for accessing the field via an interface.
+func (v *ReplaySessionSettingsInput) GetHttp() *ReplaySessionHttpSettingsInput { return v.Http }
 
 type ReplaySuffixPreprocessorInput struct {
 	Value string `json:"value"`
@@ -17189,6 +19774,7 @@ func (v *SelectProjectSelectProjectSelectProjectPayloadErrorUnknownIdUserError) 
 type SetInstanceSettingsInput struct {
 	AiProvider *SettingsAIProviderInput `json:"aiProvider"`
 	Analytics  *SettingsAnalyticInput   `json:"analytics"`
+	Network    *SettingsNetworkInput    `json:"network"`
 	Onboarding *SettingsOnboardingInput `json:"onboarding"`
 }
 
@@ -17197,6 +19783,9 @@ func (v *SetInstanceSettingsInput) GetAiProvider() *SettingsAIProviderInput { re
 
 // GetAnalytics returns SetInstanceSettingsInput.Analytics, and is useful for accessing the field via an interface.
 func (v *SetInstanceSettingsInput) GetAnalytics() *SettingsAnalyticInput { return v.Analytics }
+
+// GetNetwork returns SetInstanceSettingsInput.Network, and is useful for accessing the field via an interface.
+func (v *SetInstanceSettingsInput) GetNetwork() *SettingsNetworkInput { return v.Network }
 
 // GetOnboarding returns SetInstanceSettingsInput.Onboarding, and is useful for accessing the field via an interface.
 func (v *SetInstanceSettingsInput) GetOnboarding() *SettingsOnboardingInput { return v.Onboarding }
@@ -17322,6 +19911,25 @@ type SettingsAnalyticInput struct {
 
 // GetEnabled returns SettingsAnalyticInput.Enabled, and is useful for accessing the field via an interface.
 func (v *SettingsAnalyticInput) GetEnabled() bool { return v.Enabled }
+
+type SettingsNetworkInput struct {
+	Stack SettingsNetworkStack `json:"stack"`
+}
+
+// GetStack returns SettingsNetworkInput.Stack, and is useful for accessing the field via an interface.
+func (v *SettingsNetworkInput) GetStack() SettingsNetworkStack { return v.Stack }
+
+type SettingsNetworkStack string
+
+const (
+	SettingsNetworkStackV1 SettingsNetworkStack = "V1"
+	SettingsNetworkStackV2 SettingsNetworkStack = "V2"
+)
+
+var AllSettingsNetworkStack = []SettingsNetworkStack{
+	SettingsNetworkStackV1,
+	SettingsNetworkStackV2,
+}
 
 type SettingsOnboardingInput struct {
 	Analytic bool `json:"analytic"`
@@ -17676,21 +20284,6 @@ func (v *StartAutomateTaskStartAutomateTaskStartAutomateTaskPayloadAutomateTask)
 	return v.Id
 }
 
-type StartReplayTaskInput struct {
-	Connection ConnectionInfoInput      `json:"connection"`
-	Raw        string                   `json:"raw"`
-	Settings   ReplayEntrySettingsInput `json:"settings"`
-}
-
-// GetConnection returns StartReplayTaskInput.Connection, and is useful for accessing the field via an interface.
-func (v *StartReplayTaskInput) GetConnection() ConnectionInfoInput { return v.Connection }
-
-// GetRaw returns StartReplayTaskInput.Raw, and is useful for accessing the field via an interface.
-func (v *StartReplayTaskInput) GetRaw() string { return v.Raw }
-
-// GetSettings returns StartReplayTaskInput.Settings, and is useful for accessing the field via an interface.
-func (v *StartReplayTaskInput) GetSettings() ReplayEntrySettingsInput { return v.Settings }
-
 // StartReplayTaskResponse is returned by StartReplayTask on success.
 type StartReplayTaskResponse struct {
 	StartReplayTask StartReplayTaskStartReplayTaskStartReplayTaskPayload `json:"startReplayTask"`
@@ -17829,6 +20422,7 @@ func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorPermissionDeni
 // StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorOtherUserError
 // StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorPermissionDeniedUserError
 // StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError
+// StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError
 type StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError interface {
 	implementsGraphQLInterfaceStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError()
 	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
@@ -17842,6 +20436,8 @@ func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorOtherUserError
 func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorPermissionDeniedUserError) implementsGraphQLInterfaceStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError() {
 }
 func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError) implementsGraphQLInterfaceStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError() {
+}
+func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError) implementsGraphQLInterfaceStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError() {
 }
 
 func __unmarshalStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError(b []byte, v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError) error {
@@ -17869,6 +20465,9 @@ func __unmarshalStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartRe
 		return json.Unmarshal(b, *v)
 	case "TaskInProgressUserError":
 		*v = new(StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError)
+		return json.Unmarshal(b, *v)
+	case "UnknownIdUserError":
+		*v = new(StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError)
 		return json.Unmarshal(b, *v)
 	case "":
 		return fmt.Errorf(
@@ -17915,6 +20514,14 @@ func __marshalStartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartRepl
 			*StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError
 		}{typename, v}
 		return json.Marshal(result)
+	case *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError:
+		typename = "UnknownIdUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError
+		}{typename, v}
+		return json.Marshal(result)
 	case nil:
 		return []byte("null"), nil
 	default:
@@ -17933,6 +20540,16 @@ func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgress
 	return v.Typename
 }
 
+// StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError includes the requested fields of the GraphQL type UnknownIdUserError.
+type StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError.Typename, and is useful for accessing the field via an interface.
+func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError) GetTypename() *string {
+	return v.Typename
+}
+
 // StartReplayTaskStartReplayTaskStartReplayTaskPayloadTaskReplayTask includes the requested fields of the GraphQL type ReplayTask.
 type StartReplayTaskStartReplayTaskStartReplayTaskPayloadTaskReplayTask struct {
 	Id string `json:"id"`
@@ -17943,12 +20560,110 @@ func (v *StartReplayTaskStartReplayTaskStartReplayTaskPayloadTaskReplayTask) Get
 	return v.Id
 }
 
+type StreamDirection string
+
+const (
+	StreamDirectionBoth   StreamDirection = "BOTH"
+	StreamDirectionClient StreamDirection = "CLIENT"
+	StreamDirectionServer StreamDirection = "SERVER"
+)
+
+var AllStreamDirection = []StreamDirection{
+	StreamDirectionBoth,
+	StreamDirectionClient,
+	StreamDirectionServer,
+}
+
+type StreamMessageDirection string
+
+const (
+	StreamMessageDirectionClient StreamMessageDirection = "CLIENT"
+	StreamMessageDirectionServer StreamMessageDirection = "SERVER"
+)
+
+var AllStreamMessageDirection = []StreamMessageDirection{
+	StreamMessageDirectionClient,
+	StreamMessageDirectionServer,
+}
+
+type StreamOrderBy string
+
+const (
+	StreamOrderById StreamOrderBy = "ID"
+)
+
+var AllStreamOrderBy = []StreamOrderBy{
+	StreamOrderById,
+}
+
+type StreamOrderInput struct {
+	By       StreamOrderBy `json:"by"`
+	Ordering Ordering      `json:"ordering"`
+}
+
+// GetBy returns StreamOrderInput.By, and is useful for accessing the field via an interface.
+func (v *StreamOrderInput) GetBy() StreamOrderBy { return v.By }
+
+// GetOrdering returns StreamOrderInput.Ordering, and is useful for accessing the field via an interface.
+func (v *StreamOrderInput) GetOrdering() Ordering { return v.Ordering }
+
+type StreamProtocol string
+
+const (
+	StreamProtocolSse StreamProtocol = "SSE"
+	StreamProtocolWs  StreamProtocol = "WS"
+)
+
+var AllStreamProtocol = []StreamProtocol{
+	StreamProtocolSse,
+	StreamProtocolWs,
+}
+
 type StreamQLInput struct {
 	Code string `json:"code"`
 }
 
 // GetCode returns StreamQLInput.Code, and is useful for accessing the field via an interface.
 func (v *StreamQLInput) GetCode() string { return v.Code }
+
+type StreamWsMessageFormat string
+
+const (
+	StreamWsMessageFormatBinary StreamWsMessageFormat = "BINARY"
+	StreamWsMessageFormatClose  StreamWsMessageFormat = "CLOSE"
+	StreamWsMessageFormatPing   StreamWsMessageFormat = "PING"
+	StreamWsMessageFormatPong   StreamWsMessageFormat = "PONG"
+	StreamWsMessageFormatText   StreamWsMessageFormat = "TEXT"
+)
+
+var AllStreamWsMessageFormat = []StreamWsMessageFormat{
+	StreamWsMessageFormatBinary,
+	StreamWsMessageFormatClose,
+	StreamWsMessageFormatPing,
+	StreamWsMessageFormatPong,
+	StreamWsMessageFormatText,
+}
+
+type StreamWsMessageOrderBy string
+
+const (
+	StreamWsMessageOrderById StreamWsMessageOrderBy = "ID"
+)
+
+var AllStreamWsMessageOrderBy = []StreamWsMessageOrderBy{
+	StreamWsMessageOrderById,
+}
+
+type StreamWsMessageOrderInput struct {
+	By       StreamWsMessageOrderBy `json:"by"`
+	Ordering Ordering               `json:"ordering"`
+}
+
+// GetBy returns StreamWsMessageOrderInput.By, and is useful for accessing the field via an interface.
+func (v *StreamWsMessageOrderInput) GetBy() StreamWsMessageOrderBy { return v.By }
+
+// GetOrdering returns StreamWsMessageOrderInput.Ordering, and is useful for accessing the field via an interface.
+func (v *StreamWsMessageOrderInput) GetOrdering() Ordering { return v.Ordering }
 
 type TamperMatcherFullInput struct {
 	Full bool `json:"full"`
@@ -18227,6 +20942,26 @@ type TamperOperationStatusCodeUpdateInput struct {
 // GetReplacer returns TamperOperationStatusCodeUpdateInput.Replacer, and is useful for accessing the field via an interface.
 func (v *TamperOperationStatusCodeUpdateInput) GetReplacer() TamperReplacerInput { return v.Replacer }
 
+type TamperOperationStreamWsMessageInput struct {
+	Raw *TamperOperationStreamWsMessageRawInput `json:"raw"`
+}
+
+// GetRaw returns TamperOperationStreamWsMessageInput.Raw, and is useful for accessing the field via an interface.
+func (v *TamperOperationStreamWsMessageInput) GetRaw() *TamperOperationStreamWsMessageRawInput {
+	return v.Raw
+}
+
+type TamperOperationStreamWsMessageRawInput struct {
+	Matcher  TamperMatcherRawInput `json:"matcher"`
+	Replacer TamperReplacerInput   `json:"replacer"`
+}
+
+// GetMatcher returns TamperOperationStreamWsMessageRawInput.Matcher, and is useful for accessing the field via an interface.
+func (v *TamperOperationStreamWsMessageRawInput) GetMatcher() TamperMatcherRawInput { return v.Matcher }
+
+// GetReplacer returns TamperOperationStreamWsMessageRawInput.Replacer, and is useful for accessing the field via an interface.
+func (v *TamperOperationStreamWsMessageRawInput) GetReplacer() TamperReplacerInput { return v.Replacer }
+
 type TamperReplacerInput struct {
 	Term     *TamperReplacerTermInput     `json:"term"`
 	Workflow *TamperReplacerWorkflowInput `json:"workflow"`
@@ -18253,19 +20988,21 @@ type TamperReplacerWorkflowInput struct {
 func (v *TamperReplacerWorkflowInput) GetId() string { return v.Id }
 
 type TamperSectionInput struct {
-	RequestAll         *TamperSectionRequestAllInput         `json:"requestAll"`
-	RequestBody        *TamperSectionRequestBodyInput        `json:"requestBody"`
-	RequestFirstLine   *TamperSectionRequestFirstLineInput   `json:"requestFirstLine"`
-	RequestHeader      *TamperSectionRequestHeaderInput      `json:"requestHeader"`
-	RequestMethod      *TamperSectionRequestMethodInput      `json:"requestMethod"`
-	RequestPath        *TamperSectionRequestPathInput        `json:"requestPath"`
-	RequestQuery       *TamperSectionRequestQueryInput       `json:"requestQuery"`
-	RequestSNI         *TamperSectionRequestSNIInput         `json:"requestSNI"`
-	ResponseAll        *TamperSectionResponseAllInput        `json:"responseAll"`
-	ResponseBody       *TamperSectionResponseBodyInput       `json:"responseBody"`
-	ResponseFirstLine  *TamperSectionResponseFirstLineInput  `json:"responseFirstLine"`
-	ResponseHeader     *TamperSectionResponseHeaderInput     `json:"responseHeader"`
-	ResponseStatusCode *TamperSectionResponseStatusCodeInput `json:"responseStatusCode"`
+	RequestAll                *TamperSectionRequestAllInput         `json:"requestAll"`
+	RequestBody               *TamperSectionRequestBodyInput        `json:"requestBody"`
+	RequestFirstLine          *TamperSectionRequestFirstLineInput   `json:"requestFirstLine"`
+	RequestHeader             *TamperSectionRequestHeaderInput      `json:"requestHeader"`
+	RequestMethod             *TamperSectionRequestMethodInput      `json:"requestMethod"`
+	RequestPath               *TamperSectionRequestPathInput        `json:"requestPath"`
+	RequestQuery              *TamperSectionRequestQueryInput       `json:"requestQuery"`
+	RequestSNI                *TamperSectionRequestSNIInput         `json:"requestSNI"`
+	ResponseAll               *TamperSectionResponseAllInput        `json:"responseAll"`
+	ResponseBody              *TamperSectionResponseBodyInput       `json:"responseBody"`
+	ResponseFirstLine         *TamperSectionResponseFirstLineInput  `json:"responseFirstLine"`
+	ResponseHeader            *TamperSectionResponseHeaderInput     `json:"responseHeader"`
+	ResponseStatusCode        *TamperSectionResponseStatusCodeInput `json:"responseStatusCode"`
+	StreamWsMessageDownstream *TamperSectionStreamWsMessageInput    `json:"streamWsMessageDownstream"`
+	StreamWsMessageUpstream   *TamperSectionStreamWsMessageInput    `json:"streamWsMessageUpstream"`
 }
 
 // GetRequestAll returns TamperSectionInput.RequestAll, and is useful for accessing the field via an interface.
@@ -18317,6 +21054,16 @@ func (v *TamperSectionInput) GetResponseHeader() *TamperSectionResponseHeaderInp
 // GetResponseStatusCode returns TamperSectionInput.ResponseStatusCode, and is useful for accessing the field via an interface.
 func (v *TamperSectionInput) GetResponseStatusCode() *TamperSectionResponseStatusCodeInput {
 	return v.ResponseStatusCode
+}
+
+// GetStreamWsMessageDownstream returns TamperSectionInput.StreamWsMessageDownstream, and is useful for accessing the field via an interface.
+func (v *TamperSectionInput) GetStreamWsMessageDownstream() *TamperSectionStreamWsMessageInput {
+	return v.StreamWsMessageDownstream
+}
+
+// GetStreamWsMessageUpstream returns TamperSectionInput.StreamWsMessageUpstream, and is useful for accessing the field via an interface.
+func (v *TamperSectionInput) GetStreamWsMessageUpstream() *TamperSectionStreamWsMessageInput {
+	return v.StreamWsMessageUpstream
 }
 
 type TamperSectionRequestAllInput struct {
@@ -18419,6 +21166,15 @@ type TamperSectionResponseStatusCodeInput struct {
 
 // GetOperation returns TamperSectionResponseStatusCodeInput.Operation, and is useful for accessing the field via an interface.
 func (v *TamperSectionResponseStatusCodeInput) GetOperation() TamperOperationStatusCodeInput {
+	return v.Operation
+}
+
+type TamperSectionStreamWsMessageInput struct {
+	Operation TamperOperationStreamWsMessageInput `json:"operation"`
+}
+
+// GetOperation returns TamperSectionStreamWsMessageInput.Operation, and is useful for accessing the field via an interface.
+func (v *TamperSectionStreamWsMessageInput) GetOperation() TamperOperationStreamWsMessageInput {
 	return v.Operation
 }
 
@@ -19251,6 +22007,447 @@ func (v *ToggleWorkflowToggleWorkflowToggleWorkflowPayloadWorkflow) GetEnabled()
 	return v.Enabled
 }
 
+type UpdateReplayEntryDraftInput struct {
+	Http *UpdateReplayEntryHttpDraftInput `json:"http"`
+	Ws   *UpdateReplayEntryWsDraftInput   `json:"ws"`
+}
+
+// GetHttp returns UpdateReplayEntryDraftInput.Http, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftInput) GetHttp() *UpdateReplayEntryHttpDraftInput { return v.Http }
+
+// GetWs returns UpdateReplayEntryDraftInput.Ws, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftInput) GetWs() *UpdateReplayEntryWsDraftInput { return v.Ws }
+
+// UpdateReplayEntryDraftResponse is returned by UpdateReplayEntryDraft on success.
+type UpdateReplayEntryDraftResponse struct {
+	UpdateReplayEntryDraft UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload `json:"updateReplayEntryDraft"`
+}
+
+// GetUpdateReplayEntryDraft returns UpdateReplayEntryDraftResponse.UpdateReplayEntryDraft, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftResponse) GetUpdateReplayEntryDraft() UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload {
+	return v.UpdateReplayEntryDraft
+}
+
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload includes the requested fields of the GraphQL type UpdateReplayEntryDraftPayload.
+type UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload struct {
+	Entry *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry `json:"-"`
+}
+
+// GetEntry returns UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload.Entry, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload) GetEntry() *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry {
+	return v.Entry
+}
+
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload
+		Entry json.RawMessage `json:"entry"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Entry
+		src := firstPass.Entry
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry)
+			err = __unmarshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload.Entry: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload struct {
+	Entry json.RawMessage `json:"entry"`
+}
+
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload) __premarshalJSON() (*__premarshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload, error) {
+	var retval __premarshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload
+
+	{
+
+		dst := &retval.Entry
+		src := v.Entry
+		if src != nil {
+			var err error
+			*dst, err = __marshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayload.Entry: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry includes the requested fields of the GraphQL interface ReplayEntry.
+//
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry is implemented by the following types:
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs
+type UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry interface {
+	implementsGraphQLInterfaceUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+}
+
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp) implementsGraphQLInterfaceUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry() {
+}
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs) implementsGraphQLInterfaceUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry() {
+}
+
+func __unmarshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry(b []byte, v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplayEntryHttp":
+		*v = new(UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplayEntryWs":
+		*v = new(UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplayEntry.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalUpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry(v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp:
+		typename = "ReplayEntryHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs:
+		typename = "ReplayEntryWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntry: "%T"`, v)
+	}
+}
+
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp includes the requested fields of the GraphQL type ReplayEntryHttp.
+type UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp.Typename, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp.Id, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryHttp) GetId() string {
+	return v.Id
+}
+
+// UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs includes the requested fields of the GraphQL type ReplayEntryWs.
+type UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs.Typename, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs.Id, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryDraftUpdateReplayEntryDraftUpdateReplayEntryDraftPayloadEntryReplayEntryWs) GetId() string {
+	return v.Id
+}
+
+type UpdateReplayEntryHttpDraftInput struct {
+	Connection  ConnectionInfoInput          `json:"connection"`
+	EditorState string                       `json:"editorState"`
+	Raw         string                       `json:"raw"`
+	Settings    ReplayEntryHttpSettingsInput `json:"settings"`
+}
+
+// GetConnection returns UpdateReplayEntryHttpDraftInput.Connection, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryHttpDraftInput) GetConnection() ConnectionInfoInput { return v.Connection }
+
+// GetEditorState returns UpdateReplayEntryHttpDraftInput.EditorState, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryHttpDraftInput) GetEditorState() string { return v.EditorState }
+
+// GetRaw returns UpdateReplayEntryHttpDraftInput.Raw, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryHttpDraftInput) GetRaw() string { return v.Raw }
+
+// GetSettings returns UpdateReplayEntryHttpDraftInput.Settings, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryHttpDraftInput) GetSettings() ReplayEntryHttpSettingsInput {
+	return v.Settings
+}
+
+type UpdateReplayEntryWsDraftInput struct {
+	Direction   StreamMessageDirection     `json:"direction"`
+	EditorState string                     `json:"editorState"`
+	Format      StreamWsMessageFormat      `json:"format"`
+	Raw         string                     `json:"raw"`
+	Settings    ReplayEntryWsSettingsInput `json:"settings"`
+}
+
+// GetDirection returns UpdateReplayEntryWsDraftInput.Direction, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryWsDraftInput) GetDirection() StreamMessageDirection { return v.Direction }
+
+// GetEditorState returns UpdateReplayEntryWsDraftInput.EditorState, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryWsDraftInput) GetEditorState() string { return v.EditorState }
+
+// GetFormat returns UpdateReplayEntryWsDraftInput.Format, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryWsDraftInput) GetFormat() StreamWsMessageFormat { return v.Format }
+
+// GetRaw returns UpdateReplayEntryWsDraftInput.Raw, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryWsDraftInput) GetRaw() string { return v.Raw }
+
+// GetSettings returns UpdateReplayEntryWsDraftInput.Settings, and is useful for accessing the field via an interface.
+func (v *UpdateReplayEntryWsDraftInput) GetSettings() ReplayEntryWsSettingsInput { return v.Settings }
+
+// UpdateReplaySessionSettingsResponse is returned by UpdateReplaySessionSettings on success.
+type UpdateReplaySessionSettingsResponse struct {
+	UpdateReplaySessionSettings UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload `json:"updateReplaySessionSettings"`
+}
+
+// GetUpdateReplaySessionSettings returns UpdateReplaySessionSettingsResponse.UpdateReplaySessionSettings, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsResponse) GetUpdateReplaySessionSettings() UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload {
+	return v.UpdateReplaySessionSettings
+}
+
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload includes the requested fields of the GraphQL type UpdateReplaySessionSettingsPayload.
+type UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload struct {
+	Session *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession `json:"-"`
+}
+
+// GetSession returns UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload.Session, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload) GetSession() *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession {
+	return v.Session
+}
+
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload) UnmarshalJSON(b []byte) error {
+
+	if string(b) == "null" {
+		return nil
+	}
+
+	var firstPass struct {
+		*UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload
+		Session json.RawMessage `json:"session"`
+		graphql.NoUnmarshalJSON
+	}
+	firstPass.UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload = v
+
+	err := json.Unmarshal(b, &firstPass)
+	if err != nil {
+		return err
+	}
+
+	{
+		dst := &v.Session
+		src := firstPass.Session
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession)
+			err = __unmarshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload.Session: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+type __premarshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload struct {
+	Session json.RawMessage `json:"session"`
+}
+
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload) MarshalJSON() ([]byte, error) {
+	premarshaled, err := v.__premarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(premarshaled)
+}
+
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload) __premarshalJSON() (*__premarshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload, error) {
+	var retval __premarshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload
+
+	{
+
+		dst := &retval.Session
+		src := v.Session
+		if src != nil {
+			var err error
+			*dst, err = __marshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayload.Session: %w", err)
+			}
+		}
+	}
+	return &retval, nil
+}
+
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
+//
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession is implemented by the following types:
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs
+type UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession interface {
+	implementsGraphQLInterfaceUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+	// GetId returns the interface-field "id" from its implementation.
+	GetId() string
+}
+
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp) implementsGraphQLInterfaceUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession() {
+}
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs) implementsGraphQLInterfaceUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession() {
+}
+
+func __unmarshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession(b []byte, v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "ReplaySessionHttp":
+		*v = new(UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp)
+		return json.Unmarshal(b, *v)
+	case "ReplaySessionWs":
+		*v = new(UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing ReplaySession.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalUpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession(v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp:
+		typename = "ReplaySessionHttp"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp
+		}{typename, v}
+		return json.Marshal(result)
+	case *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs:
+		typename = "ReplaySessionWs"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySession: "%T"`, v)
+	}
+}
+
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp includes the requested fields of the GraphQL type ReplaySessionHttp.
+type UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp.Typename, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp.Id, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionHttp) GetId() string {
+	return v.Id
+}
+
+// UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs includes the requested fields of the GraphQL type ReplaySessionWs.
+type UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs struct {
+	Typename *string `json:"__typename"`
+	Id       string  `json:"id"`
+}
+
+// GetTypename returns UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs.Typename, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs) GetTypename() *string {
+	return v.Typename
+}
+
+// GetId returns UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs.Id, and is useful for accessing the field via an interface.
+func (v *UpdateReplaySessionSettingsUpdateReplaySessionSettingsUpdateReplaySessionSettingsPayloadSessionReplaySessionWs) GetId() string {
+	return v.Id
+}
+
 type UpdateTamperRuleInput struct {
 	Condition *QueryInput        `json:"condition"`
 	Name      string             `json:"name"`
@@ -19890,11 +23087,15 @@ func (v *__GetInterceptEntryInput) GetId() string { return v.Id }
 
 // __GetReplayEntryInput is used internally by genqlient
 type __GetReplayEntryInput struct {
-	Id string `json:"id"`
+	Id          string            `json:"id"`
+	SessionKind ReplaySessionKind `json:"sessionKind"`
 }
 
 // GetId returns __GetReplayEntryInput.Id, and is useful for accessing the field via an interface.
 func (v *__GetReplayEntryInput) GetId() string { return v.Id }
+
+// GetSessionKind returns __GetReplayEntryInput.SessionKind, and is useful for accessing the field via an interface.
+func (v *__GetReplayEntryInput) GetSessionKind() ReplaySessionKind { return v.SessionKind }
 
 // __GetReplaySessionInput is used internally by genqlient
 type __GetReplaySessionInput struct {
@@ -19935,6 +23136,14 @@ type __GetSitemapEntryInput struct {
 
 // GetId returns __GetSitemapEntryInput.Id, and is useful for accessing the field via an interface.
 func (v *__GetSitemapEntryInput) GetId() string { return v.Id }
+
+// __GetStreamInput is used internally by genqlient
+type __GetStreamInput struct {
+	Id string `json:"id"`
+}
+
+// GetId returns __GetStreamInput.Id, and is useful for accessing the field via an interface.
+func (v *__GetStreamInput) GetId() string { return v.Id }
 
 // __GetTamperRuleInput is used internally by genqlient
 type __GetTamperRuleInput struct {
@@ -20164,6 +23373,66 @@ type __ListSitemapRootEntriesInput struct {
 // GetScopeId returns __ListSitemapRootEntriesInput.ScopeId, and is useful for accessing the field via an interface.
 func (v *__ListSitemapRootEntriesInput) GetScopeId() *string { return v.ScopeId }
 
+// __ListStreamWsMessagesInput is used internally by genqlient
+type __ListStreamWsMessagesInput struct {
+	StreamId string                     `json:"streamId"`
+	First    *int                       `json:"first"`
+	Last     *int                       `json:"last"`
+	After    *string                    `json:"after"`
+	Before   *string                    `json:"before"`
+	Order    *StreamWsMessageOrderInput `json:"order"`
+}
+
+// GetStreamId returns __ListStreamWsMessagesInput.StreamId, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetStreamId() string { return v.StreamId }
+
+// GetFirst returns __ListStreamWsMessagesInput.First, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetFirst() *int { return v.First }
+
+// GetLast returns __ListStreamWsMessagesInput.Last, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetLast() *int { return v.Last }
+
+// GetAfter returns __ListStreamWsMessagesInput.After, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetAfter() *string { return v.After }
+
+// GetBefore returns __ListStreamWsMessagesInput.Before, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetBefore() *string { return v.Before }
+
+// GetOrder returns __ListStreamWsMessagesInput.Order, and is useful for accessing the field via an interface.
+func (v *__ListStreamWsMessagesInput) GetOrder() *StreamWsMessageOrderInput { return v.Order }
+
+// __ListStreamsInput is used internally by genqlient
+type __ListStreamsInput struct {
+	First   *int              `json:"first"`
+	Last    *int              `json:"last"`
+	After   *string           `json:"after"`
+	Before  *string           `json:"before"`
+	Filter  *StreamQLInput    `json:"filter"`
+	Order   *StreamOrderInput `json:"order"`
+	ScopeId *string           `json:"scopeId"`
+}
+
+// GetFirst returns __ListStreamsInput.First, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetFirst() *int { return v.First }
+
+// GetLast returns __ListStreamsInput.Last, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetLast() *int { return v.Last }
+
+// GetAfter returns __ListStreamsInput.After, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetAfter() *string { return v.After }
+
+// GetBefore returns __ListStreamsInput.Before, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetBefore() *string { return v.Before }
+
+// GetFilter returns __ListStreamsInput.Filter, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetFilter() *StreamQLInput { return v.Filter }
+
+// GetOrder returns __ListStreamsInput.Order, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetOrder() *StreamOrderInput { return v.Order }
+
+// GetScopeId returns __ListStreamsInput.ScopeId, and is useful for accessing the field via an interface.
+func (v *__ListStreamsInput) GetScopeId() *string { return v.ScopeId }
+
 // __LocalizeWorkflowInput is used internally by genqlient
 type __LocalizeWorkflowInput struct {
 	Id string `json:"id"`
@@ -20358,15 +23627,11 @@ func (v *__StartAutomateTaskInput) GetAutomateSessionId() string { return v.Auto
 
 // __StartReplayTaskInput is used internally by genqlient
 type __StartReplayTaskInput struct {
-	SessionId string               `json:"sessionId"`
-	Input     StartReplayTaskInput `json:"input"`
+	SessionId string `json:"sessionId"`
 }
 
 // GetSessionId returns __StartReplayTaskInput.SessionId, and is useful for accessing the field via an interface.
 func (v *__StartReplayTaskInput) GetSessionId() string { return v.SessionId }
-
-// GetInput returns __StartReplayTaskInput.Input, and is useful for accessing the field via an interface.
-func (v *__StartReplayTaskInput) GetInput() StartReplayTaskInput { return v.Input }
 
 // __TogglePluginInput is used internally by genqlient
 type __TogglePluginInput struct {
@@ -20403,6 +23668,30 @@ func (v *__ToggleWorkflowInput) GetId() string { return v.Id }
 
 // GetEnabled returns __ToggleWorkflowInput.Enabled, and is useful for accessing the field via an interface.
 func (v *__ToggleWorkflowInput) GetEnabled() bool { return v.Enabled }
+
+// __UpdateReplayEntryDraftInput is used internally by genqlient
+type __UpdateReplayEntryDraftInput struct {
+	Id    string                      `json:"id"`
+	Input UpdateReplayEntryDraftInput `json:"input"`
+}
+
+// GetId returns __UpdateReplayEntryDraftInput.Id, and is useful for accessing the field via an interface.
+func (v *__UpdateReplayEntryDraftInput) GetId() string { return v.Id }
+
+// GetInput returns __UpdateReplayEntryDraftInput.Input, and is useful for accessing the field via an interface.
+func (v *__UpdateReplayEntryDraftInput) GetInput() UpdateReplayEntryDraftInput { return v.Input }
+
+// __UpdateReplaySessionSettingsInput is used internally by genqlient
+type __UpdateReplaySessionSettingsInput struct {
+	Id    string                     `json:"id"`
+	Input ReplaySessionSettingsInput `json:"input"`
+}
+
+// GetId returns __UpdateReplaySessionSettingsInput.Id, and is useful for accessing the field via an interface.
+func (v *__UpdateReplaySessionSettingsInput) GetId() string { return v.Id }
+
+// GetInput returns __UpdateReplaySessionSettingsInput.Input, and is useful for accessing the field via an interface.
+func (v *__UpdateReplaySessionSettingsInput) GetInput() ReplaySessionSettingsInput { return v.Input }
 
 // __UpdateTamperRuleInput is used internally by genqlient
 type __UpdateTamperRuleInput struct {
@@ -20729,8 +24018,15 @@ const CreateReplaySession_Operation = `
 mutation CreateReplaySession ($input: CreateReplaySessionInput!) {
 	createReplaySession(input: $input) {
 		session {
+			__typename
 			id
 			name
+			... on ReplaySessionHttp {
+				activeEntry {
+					__typename
+					id
+				}
+			}
 		}
 	}
 }
@@ -22206,56 +25502,59 @@ func GetInterceptStatus(
 
 // The query executed by GetReplayEntry.
 const GetReplayEntry_Operation = `
-query GetReplayEntry ($id: ID!) {
-	replayEntry(id: $id) {
+query GetReplayEntry ($id: ID!, $sessionKind: ReplaySessionKind!) {
+	replayEntry(id: $id, sessionKind: $sessionKind) {
+		__typename
 		id
-		raw
 		error
 		createdAt
-		connection {
-			host
-			port
-			isTLS
-		}
-		settings {
-			placeholders {
-				inputRange {
-					start
-					end
-				}
-				outputRange {
-					start
-					end
-				}
-				preprocessors {
-					options {
-						__typename
-						... on ReplayPrefixPreprocessor {
-							value
-						}
-						... on ReplaySuffixPreprocessor {
-							value
+		... on ReplayEntryHttp {
+			raw
+			connection {
+				host
+				port
+				isTLS
+			}
+			settings {
+				placeholders {
+					inputRange {
+						start
+						end
+					}
+					outputRange {
+						start
+						end
+					}
+					preprocessors {
+						options {
+							__typename
+							... on ReplayPrefixPreprocessor {
+								value
+							}
+							... on ReplaySuffixPreprocessor {
+								value
+							}
 						}
 					}
 				}
 			}
-		}
-		request {
-			id
-			method
-			host
-			port
-			path
-			query
-			isTls
-			raw
-			createdAt
-			response {
+			request {
 				id
-				statusCode
+				method
+				host
+				port
+				path
+				query
+				isTls
 				raw
-				roundtripTime
-				length
+				createdAt
+				response {
+					id
+					statusCode
+					raw
+					roundtripTime
+					length
+				}
 			}
 		}
 	}
@@ -22266,12 +25565,14 @@ func GetReplayEntry(
 	ctx_ context.Context,
 	client_ graphql.Client,
 	id string,
+	sessionKind ReplaySessionKind,
 ) (data_ *GetReplayEntryResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "GetReplayEntry",
 		Query:  GetReplayEntry_Operation,
 		Variables: &__GetReplayEntryInput{
-			Id: id,
+			Id:          id,
+			SessionKind: sessionKind,
 		},
 	}
 
@@ -22291,30 +25592,41 @@ func GetReplayEntry(
 const GetReplaySession_Operation = `
 query GetReplaySession ($id: ID!) {
 	replaySession(id: $id) {
+		__typename
 		id
 		name
-		activeEntry {
-			id
-		}
-		collection {
-			id
-			name
-		}
-		entries(first: 100) {
-			edges {
-				node {
-					id
-					raw
-					connection {
-						host
-						port
-						isTLS
+		... on ReplaySessionHttp {
+			activeEntry {
+				__typename
+				id
+			}
+			collection {
+				id
+				name
+			}
+			settings {
+				connectionClose
+				updateContentLength
+			}
+			entries(first: 100) {
+				edges {
+					node {
+						__typename
+						... on ReplayEntryHttp {
+							id
+							raw
+							connection {
+								host
+								port
+								isTLS
+							}
+						}
 					}
 				}
-			}
-			pageInfo {
-				hasNextPage
-				endCursor
+				pageInfo {
+					hasNextPage
+					endCursor
+				}
 			}
 		}
 	}
@@ -22551,6 +25863,48 @@ func GetSitemapEntry(
 	}
 
 	data_ = &GetSitemapEntryResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by GetStream.
+const GetStream_Operation = `
+query GetStream ($id: ID!) {
+	stream(id: $id) {
+		id
+		host
+		port
+		path
+		isTls
+		direction
+		source
+		protocol
+		createdAt
+	}
+}
+`
+
+func GetStream(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+) (data_ *GetStreamResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "GetStream",
+		Query:  GetStream_Operation,
+		Variables: &__GetStreamInput{
+			Id: id,
+		},
+	}
+
+	data_ = &GetStreamResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(
@@ -23216,6 +26570,7 @@ query ListReplaySessionCollections ($first: Int, $last: Int, $after: String, $be
 				id
 				name
 				sessions {
+					__typename
 					id
 					name
 				}
@@ -23272,14 +26627,18 @@ query ListReplaySessions ($first: Int, $last: Int, $after: String, $before: Stri
 		edges {
 			cursor
 			node {
+				__typename
 				id
 				name
-				activeEntry {
-					id
-				}
-				collection {
-					id
-					name
+				... on ReplaySessionHttp {
+					activeEntry {
+						__typename
+						id
+					}
+					collection {
+						id
+						name
+					}
 				}
 			}
 		}
@@ -23597,6 +26956,135 @@ func ListSitemapRootEntries(
 	}
 
 	data_ = &ListSitemapRootEntriesResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListStreamWsMessages.
+const ListStreamWsMessages_Operation = `
+query ListStreamWsMessages ($streamId: ID!, $first: Int, $last: Int, $after: String, $before: String, $order: StreamWsMessageOrderInput) {
+	streamWsMessages(streamId: $streamId, first: $first, last: $last, after: $after, before: $before, order: $order) {
+		edges {
+			cursor
+			node {
+				id
+				head {
+					id
+					direction
+					format
+					length
+					raw
+					alteration
+					createdAt
+				}
+			}
+		}
+		pageInfo {
+			hasNextPage
+			hasPreviousPage
+			startCursor
+			endCursor
+		}
+	}
+}
+`
+
+func ListStreamWsMessages(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	streamId string,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	order *StreamWsMessageOrderInput,
+) (data_ *ListStreamWsMessagesResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListStreamWsMessages",
+		Query:  ListStreamWsMessages_Operation,
+		Variables: &__ListStreamWsMessagesInput{
+			StreamId: streamId,
+			First:    first,
+			Last:     last,
+			After:    after,
+			Before:   before,
+			Order:    order,
+		},
+	}
+
+	data_ = &ListStreamWsMessagesResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListStreams.
+const ListStreams_Operation = `
+query ListStreams ($first: Int, $last: Int, $after: String, $before: String, $filter: StreamQLInput, $order: StreamOrderInput, $scopeId: ID) {
+	streams(first: $first, last: $last, after: $after, before: $before, filter: $filter, order: $order, scopeId: $scopeId) {
+		edges {
+			cursor
+			node {
+				id
+				host
+				port
+				path
+				isTls
+				direction
+				source
+				protocol
+				createdAt
+			}
+		}
+		pageInfo {
+			hasNextPage
+			hasPreviousPage
+			startCursor
+			endCursor
+		}
+	}
+}
+`
+
+func ListStreams(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter *StreamQLInput,
+	order *StreamOrderInput,
+	scopeId *string,
+) (data_ *ListStreamsResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListStreams",
+		Query:  ListStreams_Operation,
+		Variables: &__ListStreamsInput{
+			First:   first,
+			Last:    last,
+			After:   after,
+			Before:  before,
+			Filter:  filter,
+			Order:   order,
+			ScopeId: scopeId,
+		},
+	}
+
+	data_ = &ListStreamsResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(
@@ -24070,16 +27558,57 @@ func LocalizeWorkflow(
 	return data_, err_
 }
 
+// The mutation executed by LoginAsGuest.
+const LoginAsGuest_Operation = `
+mutation LoginAsGuest {
+	loginAsGuest {
+		token {
+			accessToken
+			refreshToken
+			expiresAt
+			scopes
+		}
+		error {
+			__typename
+		}
+	}
+}
+`
+
+func LoginAsGuest(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *LoginAsGuestResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "LoginAsGuest",
+		Query:  LoginAsGuest_Operation,
+	}
+
+	data_ = &LoginAsGuestResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
 // The mutation executed by MoveReplaySession.
 const MoveReplaySession_Operation = `
 mutation MoveReplaySession ($id: ID!, $collectionId: ID!) {
 	moveReplaySession(id: $id, collectionId: $collectionId) {
 		session {
+			__typename
 			id
 			name
-			collection {
-				id
-				name
+			... on ReplaySessionHttp {
+				collection {
+					id
+					name
+				}
 			}
 		}
 	}
@@ -24349,6 +27878,7 @@ const RenameReplaySession_Operation = `
 mutation RenameReplaySession ($id: ID!, $name: String!) {
 	renameReplaySession(id: $id, name: $name) {
 		session {
+			__typename
 			id
 			name
 		}
@@ -24892,8 +28422,8 @@ func StartAutomateTask(
 
 // The mutation executed by StartReplayTask.
 const StartReplayTask_Operation = `
-mutation StartReplayTask ($sessionId: ID!, $input: StartReplayTaskInput!) {
-	startReplayTask(sessionId: $sessionId, input: $input) {
+mutation StartReplayTask ($sessionId: ID!) {
+	startReplayTask(sessionId: $sessionId) {
 		task {
 			id
 		}
@@ -24911,14 +28441,12 @@ func StartReplayTask(
 	ctx_ context.Context,
 	client_ graphql.Client,
 	sessionId string,
-	input StartReplayTaskInput,
 ) (data_ *StartReplayTaskResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "StartReplayTask",
 		Query:  StartReplayTask_Operation,
 		Variables: &__StartReplayTaskInput{
 			SessionId: sessionId,
-			Input:     input,
 		},
 	}
 
@@ -25058,6 +28586,84 @@ func ToggleWorkflow(
 	}
 
 	data_ = &ToggleWorkflowResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by UpdateReplayEntryDraft.
+const UpdateReplayEntryDraft_Operation = `
+mutation UpdateReplayEntryDraft ($id: ID!, $input: UpdateReplayEntryDraftInput!) {
+	updateReplayEntryDraft(id: $id, input: $input) {
+		entry {
+			__typename
+			id
+		}
+	}
+}
+`
+
+func UpdateReplayEntryDraft(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+	input UpdateReplayEntryDraftInput,
+) (data_ *UpdateReplayEntryDraftResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "UpdateReplayEntryDraft",
+		Query:  UpdateReplayEntryDraft_Operation,
+		Variables: &__UpdateReplayEntryDraftInput{
+			Id:    id,
+			Input: input,
+		},
+	}
+
+	data_ = &UpdateReplayEntryDraftResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by UpdateReplaySessionSettings.
+const UpdateReplaySessionSettings_Operation = `
+mutation UpdateReplaySessionSettings ($id: ID!, $input: ReplaySessionSettingsInput!) {
+	updateReplaySessionSettings(id: $id, input: $input) {
+		session {
+			__typename
+			id
+		}
+	}
+}
+`
+
+func UpdateReplaySessionSettings(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+	input ReplaySessionSettingsInput,
+) (data_ *UpdateReplaySessionSettingsResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "UpdateReplaySessionSettings",
+		Query:  UpdateReplaySessionSettings_Operation,
+		Variables: &__UpdateReplaySessionSettingsInput{
+			Id:    id,
+			Input: input,
+		},
+	}
+
+	data_ = &UpdateReplaySessionSettingsResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

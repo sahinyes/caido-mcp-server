@@ -251,9 +251,15 @@ type AutomateEntryEdge {
   node: AutomateEntry!
 }
 
+type AutomateEntryExtract {
+  name: String!
+  raw: Blob!
+}
+
 type AutomateEntryRequest {
   automateEntryId: ID!
   error: String
+  extracts: [AutomateEntryExtract!]!
   payloads: [AutomateEntryRequestPayload!]!
   request: Request!
   sequenceId: ID!
@@ -291,6 +297,11 @@ type AutomateEntryRequestEdge {
 }
 
 enum AutomateEntryRequestOrderBy {
+  EXTRACT_0
+  EXTRACT_1
+  EXTRACT_2
+  EXTRACT_3
+  EXTRACT_4
   ID
   PAYLOAD_0
   PAYLOAD_1
@@ -298,6 +309,7 @@ enum AutomateEntryRequestOrderBy {
   PAYLOAD_3
   PAYLOAD_4
   POSITION
+  REQ_CREATED_AT
   RESP_LENGTH
   RESP_ROUNDTRIP_TIME
   RESP_STATUS_CODE
@@ -311,6 +323,24 @@ input AutomateEntryRequestOrderInput {
 type AutomateEntryRequestPayload {
   position: Int
   raw: Blob
+}
+
+union AutomateExtractor = AutomateExtractorRegex
+
+input AutomateExtractorInput @oneOf {
+  automateExtractorRegex: AutomateExtractorRegexInput
+}
+
+type AutomateExtractorRegex {
+  body: Boolean!
+  regex: String!
+  workflowId: ID
+}
+
+input AutomateExtractorRegexInput {
+  body: Boolean!
+  regex: String!
+  workflowId: ID
 }
 
 type AutomateHostedFilePayload {
@@ -476,6 +506,7 @@ type AutomateSessionEdge {
 type AutomateSettings {
   closeConnection: Boolean!
   concurrency: AutomateConcurrencySetting!
+  extractors: [AutomateExtractor!]!
   payloads: [AutomatePayload!]!
   placeholders: [AutomatePlaceholder!]!
   redirect: AutomateRedirectSetting!
@@ -487,6 +518,7 @@ type AutomateSettings {
 input AutomateSettingsInput {
   closeConnection: Boolean!
   concurrency: AutomateConcurrencySettingInput!
+  extractors: [AutomateExtractorInput!]!
   payloads: [AutomatePayloadInput!]!
   placeholders: [AutomatePlaceholderInput!]!
   redirect: AutomateRedirectSettingInput!
@@ -687,6 +719,10 @@ type CertificateUserError implements UserError {
   reason: CertificateErrorReason!
 }
 
+type ClearReplayEntryDraftPayload {
+  entry: ReplayEntry
+}
+
 type ClearSitemapEntriesPayload {
   deletedIds: [ID!]!
 }
@@ -807,6 +843,7 @@ union CreateFilterPresetError =
 input CreateFilterPresetInput {
   alias: Alias!
   clause: QueryInput!
+  global: Boolean!
   name: String!
 }
 
@@ -853,13 +890,47 @@ type CreateReplaySessionCollectionPayload {
   collection: ReplaySessionCollection
 }
 
+union CreateReplaySessionError = PermissionDeniedUserError | CloudUserError | OtherUserError
+
 input CreateReplaySessionInput {
   collectionId: ID
+  kind: ReplaySessionKind!
   requestSource: RequestSourceInput
+  settings: ReplaySessionSettingsInput
 }
 
 type CreateReplaySessionPayload {
+  error: CreateReplaySessionError
   session: ReplaySession
+}
+
+input CreateRequestInput {
+  alteration: Alteration!
+  host: String!
+  isTls: Boolean!
+  method: String!
+  parentId: ID
+  path: String!
+  port: Int!
+  query: String!
+  raw: Blob!
+  response: CreateResponseInput
+  sni: String
+  source: Source!
+}
+
+type CreateRequestPayload {
+  id: ID!
+  responseId: ID
+}
+
+input CreateResponseInput {
+  alteration: Alteration!
+  parentId: ID
+  raw: Blob!
+  roundtripTime: Int!
+  source: Source!
+  statusCode: Int!
 }
 
 union CreateScopeError = InvalidGlobTermsUserError | OtherUserError
@@ -1189,6 +1260,11 @@ enum DataExportFormat {
 type DataExportOnDemand implements DataExport {
   downloadUri: Uri!
   id: ID!
+}
+
+input DataExportSettingsInput {
+  format: DataExportFormat!
+  includeRaw: Boolean!
 }
 
 enum DataExportStatus {
@@ -1564,6 +1640,22 @@ type ExportFindingsPayload {
   export: DataExportOnDemand
 }
 
+union ExportSitemapEntriesError = PermissionDeniedUserError | OtherUserError
+
+input ExportSitemapEntriesFilter @oneOf {
+  ids: [ID!]
+}
+
+input ExportSitemapEntriesInput {
+  filter: ExportSitemapEntriesFilter!
+  settings: DataExportSettingsInput!
+}
+
+type ExportSitemapEntriesPayload {
+  error: ExportSitemapEntriesError
+  export: DataExportOnDemand
+}
+
 union ExportTamperError = PermissionDeniedUserError | OtherUserError
 
 input ExportTamperInput {
@@ -1582,6 +1674,7 @@ input FilterClauseFindingInput {
 type FilterPreset {
   alias: Alias!
   clause: Query!
+  global: Boolean!
   id: ID!
   name: String!
 }
@@ -1775,6 +1868,10 @@ input HTTPQLInput {
   code: String!
 }
 
+type HiddenStreamWsMessage {
+  hiddenId: ID!
+}
+
 input HideFindingsInput @oneOf {
   ids: [ID!]
   reporter: String
@@ -1846,6 +1943,7 @@ type InstallPluginPackagePayload {
 type InstanceSettings {
   aiProviders: AIProviders!
   analytic: AnalyticStatus!
+  network: NetworkState!
   onboarding: OnboardingState!
 }
 
@@ -2035,9 +2133,19 @@ type InvalidHTTPQLUserError implements UserError {
   query: String!
 }
 
+type InvalidRangeUserError implements UserError {
+  code: String!
+  range: Range!
+}
+
 type InvalidRegexUserError implements UserError {
   code: String!
   term: String!
+}
+
+type InvalidStreamQLUserError implements UserError {
+  code: String!
+  query: String!
 }
 
 """
@@ -2095,6 +2203,7 @@ type MutationRoot {
   cancelBackupTask(id: ID!): CancelBackupTaskPayload!
   cancelRestoreBackupTask(id: ID!): CancelRestoreBackupTaskPayload!
   cancelTask(id: ID!): CancelTaskPayload!
+  clearReplayEntryDraft(id: ID!, kind: ReplaySessionKind!): ClearReplayEntryDraftPayload!
   clearSitemapEntries: ClearSitemapEntriesPayload!
   createAssistantSession(input: CreateAssistantSessionInput!): CreateAssistantSessionPayload! @cloud
   createAutomateSession(input: CreateAutomateSessionInput!): CreateAutomateSessionPayload!
@@ -2109,6 +2218,7 @@ type MutationRoot {
   createReplaySessionCollection(
     input: CreateReplaySessionCollectionInput!
   ): CreateReplaySessionCollectionPayload!
+  createRequest(input: CreateRequestInput!): CreateRequestPayload!
   createScope(input: CreateScopeInput!): CreateScopePayload!
   createSitemapEntries(requestId: ID!): CreateSitemapEntriesPayload!
   createTamperRule(input: CreateTamperRuleInput!): CreateTamperRulePayload!
@@ -2147,6 +2257,7 @@ type MutationRoot {
   dropInterceptMessage(id: ID!): DropInterceptMessagePayload!
   duplicateAutomateSession(id: ID!): DuplicateAutomateSessionPayload!
   exportFindings(input: ExportFindingsInput!): ExportFindingsPayload!
+  exportSitemapEntries(input: ExportSitemapEntriesInput!): ExportSitemapEntriesPayload! @cloud
   exportTamper(input: ExportTamperInput!): ExportTamperPayload! @cloud
   forwardInterceptMessage(
     id: ID!
@@ -2197,6 +2308,11 @@ type MutationRoot {
   selectEnvironment(id: ID): SelectEnvironmentPayload!
   selectProject(id: ID!): SelectProjectPayload! @cloud
   sendAssistantMessage(sessionId: ID!, message: String): SendAssistantMessagePayload! @cloud
+  sendReplayTaskMessage(
+    task: ID!
+    input: SendReplayTaskMessageInput!
+  ): SendReplayTaskMessagePayload!
+  sendReplayTaskMessageDraft(task: ID!): SendReplayTaskMessagePayload!
   setActiveReplaySessionEntry(id: ID!, entryId: ID!): SetActiveReplaySessionEntryPayload!
     @deprecated(reason: "Remove usage, no replacement")
   setGlobalConfigPort(input: Int!): SetConfigPortPayload!
@@ -2212,8 +2328,10 @@ type MutationRoot {
   ): StartDeleteStreamWsMessageTaskPayload!
   startExportRequestsTask(input: StartExportRequestsTaskInput!): StartExportRequestsTaskPayload!
     @cloud
-  startReplayTask(sessionId: ID!, input: StartReplayTaskInput!): StartReplayTaskPayload! @cloud
+  startReplayTask(sessionId: ID!): StartReplayTaskPayload! @cloud
+  stopReplayWsTasks(taskIds: [ID!]!): StopReplayWsTaskPayload!
   testAiProvider(input: TestAIProviderInput!): TestAIProviderPayload! @cloud
+  testExtractor(input: TestExtractorInput!): TestExtractorPayload!
   testTamperRule(input: TestTamperRuleInput!): TestTamperRulePayload!
   testUpstreamProxyHttp(input: TestUpstreamProxyHttpInput!): TestUpstreamProxyHttpPayload!
   testUpstreamProxySocks(input: TestUpstreamProxySocksInput!): TestUpstreamProxySocksPayload!
@@ -2237,6 +2355,14 @@ type MutationRoot {
   updateEnvironment(id: ID!, input: UpdateEnvironmentInput!): UpdateEnvironmentPayload! @cloud
   updateFilterPreset(id: ID!, input: UpdateFilterPresetInput!): UpdateFilterPresetPayload!
   updateFinding(id: ID!, input: UpdateFindingInput!): UpdateFindingPayload!
+  updateReplayEntryDraft(
+    id: ID!
+    input: UpdateReplayEntryDraftInput!
+  ): UpdateReplayEntryDraftPayload!
+  updateReplaySessionSettings(
+    id: ID!
+    input: ReplaySessionSettingsInput!
+  ): UpdateReplaySessionSettingsPayload!
   updateRequestMetadata(id: ID!, input: UpdateRequestMetadataInput!): UpdateRequestMetadataPayload!
   updateScope(id: ID!, input: UpdateScopeInput!): UpdateScopePayload!
   updateTamperRule(id: ID!, input: UpdateTamperRuleInput!): UpdateTamperRulePayload!
@@ -2257,6 +2383,10 @@ type MutationRoot {
 type NameTakenUserError implements UserError {
   code: String!
   name: String!
+}
+
+type NetworkState {
+  stack: SettingsNetworkStack!
 }
 
 type NewerVersionUserError implements UserError {
@@ -2557,8 +2687,9 @@ type QueryRoot {
   interceptStatus: InterceptStatus!
   pluginPackages: [PluginPackage!]!
   projects: [Project!]! @cloud
-  replayEntry(id: ID!): ReplayEntry
+  replayEntry(id: ID!, sessionKind: ReplaySessionKind!): ReplayEntry
   replaySession(id: ID!): ReplaySession
+  replaySessionCollection(id: ID!): ReplaySessionCollection
   replaySessionCollections(
     after: String
     before: String
@@ -2607,12 +2738,14 @@ type QueryRoot {
     first: Int
     last: Int
     order: StreamWsMessageOrderInput
+    filter: StreamQLInput
     streamId: ID!
   ): StreamWsMessageConnection!
   streamWsMessagesByOffset(
     limit: Int
     offset: Int
     order: StreamWsMessageOrderInput
+    filter: StreamQLInput
     streamId: ID!
   ): StreamWsMessageConnection!
   streams(
@@ -2620,14 +2753,14 @@ type QueryRoot {
     before: String
     first: Int
     last: Int
-    protocol: StreamProtocol!
+    filter: StreamQLInput
     order: StreamOrderInput
     scopeId: ID
   ): StreamConnection!
   streamsByOffset(
     limit: Int
     offset: Int
-    protocol: StreamProtocol!
+    filter: StreamQLInput
     order: StreamOrderInput
     scopeId: ID
   ): StreamConnection!
@@ -2834,15 +2967,11 @@ type RenderRequestPayload {
   render: Image
 }
 
-type ReplayEntry {
-  connection: ConnectionInfo!
+interface ReplayEntry {
   createdAt: Timestamp!
   error: String
   id: ID!
-  raw: Blob!
-  request: Request
   session: ReplaySession!
-  settings: ReplayEntrySettings!
 }
 
 type ReplayEntryConnection {
@@ -2876,6 +3005,33 @@ type ReplayEntryEdge {
   node: ReplayEntry!
 }
 
+type ReplayEntryHttp implements ReplayEntry {
+  connection: ConnectionInfo!
+  createdAt: Timestamp!
+  draft: ReplayEntryHttpDraft
+  error: String
+  id: ID!
+  raw: Blob!
+  request: Request
+  session: ReplaySession!
+  settings: ReplayEntryHttpSettings!
+}
+
+type ReplayEntryHttpDraft {
+  connection: ConnectionInfo!
+  editorState: Blob!
+  raw: Blob!
+  settings: ReplayEntryHttpSettings!
+}
+
+type ReplayEntryHttpSettings {
+  placeholders: [ReplayPlaceholder!]!
+}
+
+input ReplayEntryHttpSettingsInput {
+  placeholders: [ReplayPlaceholderInput!]!
+}
+
 enum ReplayEntryOrderBy {
   ID
 }
@@ -2885,14 +3041,26 @@ input ReplayEntryOrderInput {
   ordering: Ordering!
 }
 
-type ReplayEntrySettings {
-  placeholders: [ReplayPlaceholder!]!
+type ReplayEntryWs implements ReplayEntry {
+  createdAt: Timestamp!
+  draft: ReplayEntryWsDraft
+  error: String
+  http: ReplayEntryHttp!
+  id: ID!
+  messages: [StreamWsMessage!]!
+  session: ReplaySession!
+  stream: Stream
 }
 
-input ReplayEntrySettingsInput {
-  connectionClose: Boolean!
-  placeholders: [ReplayPlaceholderInput!]!
-  updateContentLength: Boolean!
+type ReplayEntryWsDraft {
+  direction: StreamMessageDirection!
+  editorState: Blob!
+  format: StreamWsMessageFormat!
+  raw: Blob!
+}
+
+input ReplayEntryWsSettingsInput {
+  serverTimeoutMs: Int!
 }
 
 type ReplayEnvironmentPreprocessor {
@@ -2946,16 +3114,7 @@ input ReplayPreprocessorOptionsInput @oneOf {
   workflow: ReplayWorkflowPreprocessorInput
 }
 
-type ReplaySession {
-  activeEntry: ReplayEntry
-  collection: ReplaySessionCollection!
-  entries(
-    after: String
-    before: String
-    first: Int
-    last: Int
-    order: ReplayEntryOrderInput
-  ): ReplayEntryConnection!
+interface ReplaySession {
   id: ID!
   name: String!
   rank: Rank!
@@ -3030,6 +3189,56 @@ type ReplaySessionEdge {
   node: ReplaySession!
 }
 
+type ReplaySessionHttp implements ReplaySession {
+  activeEntry: ReplayEntry
+  collection: ReplaySessionCollection!
+  entries(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    order: ReplayEntryOrderInput
+  ): ReplayEntryConnection!
+  id: ID!
+  name: String!
+  rank: Rank!
+  settings: ReplaySessionHttpSettings
+}
+
+type ReplaySessionHttpSettings {
+  connectionClose: Boolean!
+  updateContentLength: Boolean!
+}
+
+input ReplaySessionHttpSettingsInput {
+  connectionClose: Boolean!
+  updateContentLength: Boolean!
+}
+
+enum ReplaySessionKind {
+  HTTP
+  WS
+}
+
+input ReplaySessionSettingsInput @oneOf {
+  http: ReplaySessionHttpSettingsInput
+}
+
+type ReplaySessionWs implements ReplaySession {
+  activeEntry: ReplayEntry
+  collection: ReplaySessionCollection!
+  entries(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    order: ReplayEntryOrderInput
+  ): ReplayEntryConnection!
+  id: ID!
+  name: String!
+  rank: Rank!
+}
+
 type ReplaySuffixPreprocessor {
   value: String!
 }
@@ -3042,6 +3251,7 @@ type ReplayTask implements Task {
   createdAt: DateTime!
   id: ID!
   replayEntry: ReplayEntry!
+  sessionKind: ReplaySessionKind!
 }
 
 type ReplayUrlEncodePreprocessor {
@@ -3270,6 +3480,10 @@ type SelectProjectPayload {
 
 union SelectProjectPayloadError = ProjectUserError | UnknownIdUserError | OtherUserError
 
+type SelectedProjectPayload {
+  currentProject: CurrentProject
+}
+
 union SendAssistantMessageError =
   | PermissionDeniedUserError
   | TaskInProgressUserError
@@ -3279,6 +3493,27 @@ union SendAssistantMessageError =
 type SendAssistantMessagePayload {
   error: SendAssistantMessageError
   task: AssistantMessageTask
+}
+
+input SendReplayStreamWsMessage {
+  data: Blob!
+  direction: StreamMessageDirection!
+  format: StreamWsMessageFormat!
+}
+
+union SendReplayTaskMessageError =
+  | UnknownIdUserError
+  | PermissionDeniedUserError
+  | CloudUserError
+  | OtherUserError
+
+input SendReplayTaskMessageInput @oneOf {
+  ws: SendReplayStreamWsMessage
+}
+
+type SendReplayTaskMessagePayload {
+  error: SendReplayTaskMessageError
+  message: StreamMessage
 }
 
 scalar Sensitive
@@ -3303,6 +3538,7 @@ type SetConfigProjectPayload {
 input SetInstanceSettingsInput @oneOf {
   aiProvider: SettingsAIProviderInput
   analytics: SettingsAnalyticInput
+  network: SettingsNetworkInput
   onboarding: SettingsOnboardingInput
 }
 
@@ -3334,6 +3570,15 @@ input SettingsAIProviderInput @oneOf {
 
 input SettingsAnalyticInput {
   enabled: Boolean!
+}
+
+input SettingsNetworkInput {
+  stack: SettingsNetworkStack!
+}
+
+enum SettingsNetworkStack {
+  V1
+  V2
 }
 
 input SettingsOnboardingInput {
@@ -3458,16 +3703,11 @@ type StartExportRequestsTaskPayload {
 union StartExportRequestsTaskPayloadError = PermissionDeniedUserError | OtherUserError
 
 union StartReplayTaskError =
+  | UnknownIdUserError
   | TaskInProgressUserError
   | PermissionDeniedUserError
   | CloudUserError
   | OtherUserError
-
-input StartReplayTaskInput {
-  connection: ConnectionInfoInput!
-  raw: Blob!
-  settings: ReplayEntrySettingsInput!
-}
 
 type StartReplayTaskPayload {
   error: StartReplayTaskError
@@ -3489,6 +3729,12 @@ type StartedRestoreBackupTaskPayload {
 type StartedTaskPayload {
   task: Task!
 }
+
+type StopReplayWsTaskPayload {
+  error: StopReplayWsTaskPayloadError
+}
+
+union StopReplayWsTaskPayloadError = UnknownIdUserError | OtherUserError
 
 type Store {
   pluginPackages: [StorePluginPackage!]! @cloud
@@ -3574,6 +3820,8 @@ type StreamEdge {
   node: Stream!
 }
 
+union StreamMessage = StreamWsMessage
+
 enum StreamMessageDirection {
   CLIENT
   SERVER
@@ -3656,6 +3904,9 @@ type StreamWsMessageEditRef {
 
 enum StreamWsMessageFormat {
   BINARY
+  CLOSE
+  PING
+  PONG
   TEXT
 }
 
@@ -3696,7 +3947,7 @@ type SubscriptionRoot {
   createdScope: CreatedScopePayload!
   createdSitemapEntry(scopeId: ID): CreatedSitemapEntryPayload!
   createdStream(protocol: StreamProtocol!, scopeId: ID): CreatedStreamPayload!
-  createdStreamWsMessage: CreatedStreamWsMessagePayload!
+  createdStreamWsMessage(filter: StreamQLInput): CreatedStreamWsMessagePayload!
   createdTamperRule: CreatedTamperRulePayload!
   createdTamperRuleCollection: CreatedTamperRuleCollectionPayload!
   createdUpstreamPlugin: CreatedUpstreamPluginPayload!
@@ -3737,6 +3988,7 @@ type SubscriptionRoot {
   finishedRestoreBackupTask: FinishedRestoreBackupTaskPayload!
   finishedTask: FinishedTaskPayload!
   installedBrowser: UploadedBrowserPayload!
+  selectedProject: SelectedProjectPayload!
   startedBackupTask: StartedBackupTaskPayload!
   startedDeleteInterceptEntriesTask: StartedDeleteInterceptEntriesTaskPayload!
   startedRestoreBackupTask: StartedRestoreBackupTaskPayload!
@@ -3765,13 +4017,15 @@ type SubscriptionRoot {
   updatedPlugin: UpdatedPluginPayload!
   updatedPluginPackage: UpdatedPluginPackagePayload!
   updatedProject: UpdatedProjectPayload!
+  updatedReplayEntryDraft: UpdatedReplayEntryDraftPayload!
+  updatedReplayEntryWs: UpdatedReplayEntryWsPayload!
   updatedReplaySession: UpdatedReplaySessionPayload!
   updatedReplaySessionCollection: UpdatedReplaySessionCollectionPayload!
   updatedRequest(filter: HTTPQLInput, scopeId: ID): UpdatedRequestPayload!
   updatedRequestMetadata: UpdatedRequestMetadataPayload!
   updatedScope: UpdatedScopePayload!
   updatedSitemapEntry(scopeId: ID): UpdatedSitemapEntryPayload!
-  updatedStreamWsMessage: UpdatedStreamWsMessagePayload!
+  updatedStreamWsMessage(filter: StreamQLInput): UpdatedStreamWsMessagePayload!
   updatedTamperRule: UpdatedTamperRulePayload!
   updatedTamperRuleCollection: UpdatedTamperRuleCollectionPayload!
   updatedUpstreamPlugin: UpdatedUpstreamPluginPayload!
@@ -4037,6 +4291,22 @@ input TamperOperationStatusCodeUpdateInput {
   replacer: TamperReplacerInput!
 }
 
+union TamperOperationStreamWsMessage = TamperOperationStreamWsMessageRaw
+
+input TamperOperationStreamWsMessageInput @oneOf {
+  raw: TamperOperationStreamWsMessageRawInput
+}
+
+type TamperOperationStreamWsMessageRaw {
+  matcher: TamperMatcherRaw!
+  replacer: TamperReplacer!
+}
+
+input TamperOperationStreamWsMessageRawInput {
+  matcher: TamperMatcherRawInput!
+  replacer: TamperReplacerInput!
+}
+
 union TamperReplacer = TamperReplacerTerm | TamperReplacerWorkflow
 
 input TamperReplacerInput @oneOf {
@@ -4108,6 +4378,8 @@ union TamperSection =
   | TamperSectionResponseFirstLine
   | TamperSectionResponseHeader
   | TamperSectionResponseAll
+  | TamperSectionStreamWsMessageUpstream
+  | TamperSectionStreamWsMessageDownstream
 
 input TamperSectionInput @oneOf {
   requestAll: TamperSectionRequestAllInput
@@ -4123,6 +4395,8 @@ input TamperSectionInput @oneOf {
   responseFirstLine: TamperSectionResponseFirstLineInput
   responseHeader: TamperSectionResponseHeaderInput
   responseStatusCode: TamperSectionResponseStatusCodeInput
+  streamWsMessageDownstream: TamperSectionStreamWsMessageInput
+  streamWsMessageUpstream: TamperSectionStreamWsMessageInput
 }
 
 type TamperSectionRequestAll {
@@ -4229,6 +4503,18 @@ input TamperSectionResponseStatusCodeInput {
   operation: TamperOperationStatusCodeInput!
 }
 
+type TamperSectionStreamWsMessageDownstream {
+  operation: TamperOperationStreamWsMessage!
+}
+
+input TamperSectionStreamWsMessageInput {
+  operation: TamperOperationStreamWsMessageInput!
+}
+
+type TamperSectionStreamWsMessageUpstream {
+  operation: TamperOperationStreamWsMessage!
+}
+
 type TamperSummary {
   collectionsCreated: Int!
   rulesImported: Int!
@@ -4262,6 +4548,15 @@ input TestAIProviderInput @oneOf {
 type TestAIProviderPayload {
   error: TestAIProviderError
   success: Boolean
+}
+
+input TestExtractorInput {
+  extractor: AutomateExtractorInput!
+  testInput: Blob!
+}
+
+type TestExtractorPayload {
+  extracts: [Blob!]
 }
 
 union TestTamperRuleError = InvalidRegexUserError | OtherUserError
@@ -4470,6 +4765,7 @@ union UpdateFilterPresetError = NameTakenUserError | AliasTakenUserError | Other
 input UpdateFilterPresetInput {
   alias: Alias!
   clause: QueryInput!
+  global: Boolean!
   name: String!
 }
 
@@ -4489,6 +4785,34 @@ input UpdateFindingInput {
 type UpdateFindingPayload {
   error: UpdateFindingError
   finding: Finding
+}
+
+input UpdateReplayEntryDraftInput @oneOf {
+  http: UpdateReplayEntryHttpDraftInput
+  ws: UpdateReplayEntryWsDraftInput
+}
+
+type UpdateReplayEntryDraftPayload {
+  entry: ReplayEntry
+}
+
+input UpdateReplayEntryHttpDraftInput {
+  connection: ConnectionInfoInput!
+  editorState: Blob!
+  raw: Blob!
+  settings: ReplayEntryHttpSettingsInput!
+}
+
+input UpdateReplayEntryWsDraftInput {
+  direction: StreamMessageDirection!
+  editorState: Blob!
+  format: StreamWsMessageFormat!
+  raw: Blob!
+  settings: ReplayEntryWsSettingsInput!
+}
+
+type UpdateReplaySessionSettingsPayload {
+  session: ReplaySession
 }
 
 input UpdateRequestMetadataInput {
@@ -4700,6 +5024,16 @@ type UpdatedProjectPayload {
   project: Project!
 }
 
+type UpdatedReplayEntryDraftPayload {
+  entry: ReplayEntry!
+  snapshot: Snapshot!
+}
+
+type UpdatedReplayEntryWsPayload {
+  entry: ReplayEntryWs
+  snapshot: Snapshot!
+}
+
 type UpdatedReplaySessionCollectionPayload {
   collectionEdge: ReplaySessionCollectionEdge!
   snapshot: Snapshot!
@@ -4733,10 +5067,12 @@ type UpdatedSitemapEntryPayload {
   snapshot: Snapshot!
 }
 
-type UpdatedStreamWsMessagePayload {
+type UpdatedStreamWsMessage {
   messageEdge(order: StreamWsMessageOrderInput): StreamWsMessageEdge!
   snapshot: Snapshot!
 }
+
+union UpdatedStreamWsMessagePayload = UpdatedStreamWsMessage | HiddenStreamWsMessage
 
 type UpdatedTamperRuleCollectionPayload {
   collectionEdge: TamperRuleCollectionEdge!
@@ -4883,6 +5219,17 @@ type UserSubscriptionPlan {
 }
 
 scalar Version
+
+enum WSErrorReason {
+  COULD_NOT_UPGRADE_CONNECTION
+  SERVER_UNRESPONSIVE
+}
+
+type WSUserError implements UserError {
+  code: String!
+  message: String!
+  reason: WSErrorReason!
+}
 
 type Workflow {
   createdAt: DateTime!

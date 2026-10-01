@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
+	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -44,12 +45,14 @@ func getReplayEntryHandler(
 			)
 		}
 
-		resp, err := client.Replay.GetEntry(ctx, input.ID)
+		// GetEntry needs the session kind since 0.57: replayEntry(id, kind).
+		entry, err := client.Replay.GetEntry(
+			ctx, input.ID, replay.HTTPKind,
+		)
 		if err != nil {
 			return nil, GetReplayEntryOutput{}, err
 		}
 
-		entry := resp.ReplayEntry
 		if entry == nil {
 			return nil, GetReplayEntryOutput{}, fmt.Errorf(
 				"entry not found",
@@ -61,7 +64,7 @@ func getReplayEntryHandler(
 			bodyLimit = httputil.DefaultBodyLimit
 		}
 
-		output := GetReplayEntryOutput{ID: entry.Id}
+		output := GetReplayEntryOutput{ID: entry.ID}
 
 		if entry.Raw != "" {
 			decoded, decErr := base64.StdEncoding.DecodeString(

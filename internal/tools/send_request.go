@@ -46,13 +46,7 @@ func isTaskInProgress(
 	if resp == nil {
 		return false
 	}
-	payload := resp.GetStartReplayTask()
-	errPtr := payload.GetError()
-	if errPtr == nil {
-		return false
-	}
-	_, ok := (*errPtr).(*gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError)
-	return ok
+	return replay.IsTaskInProgress(resp)
 }
 
 // sendRequestHandler creates the handler function
@@ -119,53 +113,33 @@ func sendRequestHandler(
 			return nil, SendRequestOutput{}, err
 		}
 
-		// Snapshot current active entry
-		var previousEntryID string
-		sessResp, err := client.Replay.GetSession(ctx, sessionID)
-		if err == nil && sessResp.ReplaySession != nil &&
-			sessResp.ReplaySession.ActiveEntry != nil {
-			previousEntryID = sessResp.ReplaySession.ActiveEntry.Id
-		}
-
 		rawBase64 := base64.StdEncoding.EncodeToString([]byte(raw))
-
-		taskInput := &gen.StartReplayTaskInput{
-			Connection: gen.ConnectionInfoInput{
-				Host:  host,
-				Port:  port,
-				IsTLS: useTLS,
-			},
-			Raw: rawBase64,
-			Settings: gen.ReplayEntrySettingsInput{
-				Placeholders:        []gen.ReplayPlaceholderInput{},
-				UpdateContentLength: true,
-				ConnectionClose:     false,
-			},
+		conn := caido.ReplayConnection{
+			Host:  host,
+			Port:  port,
+			IsTLS: useTLS,
 		}
 
-		taskResp, err := client.Replay.SendRequest(
-			ctx, sessionID, taskInput,
+		taskResp, sendState, err := replay.SendRaw(
+			ctx, client, sessionID, conn, rawBase64, true, false,
 		)
 		if err != nil || isTaskInProgress(taskResp) {
 			// Session busy or error - create a new session and retry.
-			newResp, createErr := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
-			)
+			newSessionID, _, createErr := replay.NewSession(ctx, client)
 			if createErr != nil {
 				return nil, SendRequestOutput{}, fmt.Errorf(
 					"failed to create fallback session: %w",
 					createErr,
 				)
 			}
-			sessionID = newResp.CreateReplaySession.Session.Id
+			sessionID = newSessionID
 
 			if input.SessionID == "" {
 				replay.ResetDefaultSession(sessionID)
 			}
 
-			previousEntryID = ""
-			_, err = client.Replay.SendRequest(
-				ctx, sessionID, taskInput,
+			_, sendState, err = replay.SendRaw(
+				ctx, client, sessionID, conn, rawBase64, true, false,
 			)
 			if err != nil {
 				return nil, SendRequestOutput{}, fmt.Errorf(
@@ -176,23 +150,17 @@ func sendRequestHandler(
 
 		output := SendRequestOutput{SessionID: sessionID}
 
-		entry, pollErr := replay.PollForEntry(
-			ctx, client, sessionID, previousEntryID,
-		)
+		entry, pollErr := replay.PollForEntry(ctx, client, sendState)
 		if pollErr != nil {
 			output.Error = fmt.Sprintf(
 				"poll failed: %v (use get_replay_entry to retry)",
 				pollErr,
 			)
-			sResp, sErr := client.Replay.GetSession(ctx, sessionID)
-			if sErr == nil && sResp.ReplaySession != nil &&
-				sResp.ReplaySession.ActiveEntry != nil {
-				output.EntryID = sResp.ReplaySession.ActiveEntry.Id
-			}
+			output.EntryID = replay.ActiveEntryID(ctx, client, sessionID)
 			return nil, output, nil
 		}
 
-		output.EntryID = entry.Id
+		output.EntryID = entry.ID
 
 		if entry.Error != nil && *entry.Error != "" {
 			output.Error = *entry.Error
@@ -204,7 +172,7 @@ func sendRequestHandler(
 		}
 
 		if entry.Request != nil {
-			output.RequestID = entry.Request.Id
+			output.RequestID = entry.Request.ID
 			if !input.NoRequestEcho {
 				output.Request = httputil.ParseBase64(
 					entry.Request.Raw, true, false, 0, 0,

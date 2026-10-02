@@ -6,7 +6,7 @@ Community Go SDK for [Caido](https://caido.io) - the lightweight web security au
 > have.** It is vendored into `caido-mcp-server`; its own origin
 > (`szybnev/sdk-go`) answers "Repository not found", so the vendored copy is the
 > only published artifact and a rebase onto upstream silently drops the list
-> below. Both items are defects that upstream shares.
+> below. All three are defects that upstream shares.
 >
 > 1. **`retry_transport.go` (new file).** Retries connection-level failures once
 >    so the client self-heals after macOS sleep/wake instead of returning a
@@ -27,6 +27,12 @@ Community Go SDK for [Caido](https://caido.io) - the lightweight web security au
 >    arrive as `err == nil` with a nil session and came back as
 >    "create replay session returned no session", which reads as an SDK bug
 >    rather than an answer from Caido.
+> 3. **`GetReplaySession` reads `entries(last: 100)`, not `first: 100`**
+>    (2026-10-02). Its only consumer is the MCP's pre-send baseline, which needs
+>    the entries that existed just before a send. Measured against 0.58.3:
+>    `first:N` returns the OLDEST N, `last:N` the NEWEST N - so with `first` the
+>    baseline stopped covering anything recent once a session passed 100 entries,
+>    and the guard built on it had quietly stopped guarding.
 
 This SDK mirrors the API surface of the official [JavaScript SDK](https://github.com/caido/sdk-js) (`@caido/sdk-client`) and uses [genqlient](https://github.com/Khan/genqlient) for type-safe GraphQL code generation from the official Caido schema.
 

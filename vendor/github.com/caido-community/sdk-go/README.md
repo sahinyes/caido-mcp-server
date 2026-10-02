@@ -15,7 +15,10 @@ Community Go SDK for [Caido](https://caido.io) - the lightweight web security au
 >    delivered - replaying `startReplayTask` or `deleteFindings` duplicates a
 >    side effect, and "reset while reading the reply" is indistinguishable from
 >    "delivered and executed". Dial failures keep their retry, because nothing
->    was sent, and that is also the case the retry exists for.
+>    was sent, and that is also the case the retry exists for. Its idle-connection
+>    purge runs **before** that mutation check (2026-10-02): the socket that just
+>    failed is dead whether or not this request may replay its bytes, and leaving
+>    it pooled hands it to the next caller.
 > 2. **`createReplaySession` now selects its payload `error`**
 >    (`graphql/operations/replay.graphql`, regenerated into
 >    `graphql/generated.go`, surfaced by `createSessionPayloadError` in

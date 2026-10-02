@@ -15,7 +15,6 @@ import (
 const (
 	pollInitInterval = 50 * time.Millisecond
 	pollMaxInterval  = 500 * time.Millisecond
-	PollMaxRetries   = 20
 
 	// pollTransientLimit is how many CONSECUTIVE failed reads end a wait.
 	//
@@ -36,8 +35,17 @@ const (
 	// It is not a nicety. Everything in Send runs while holding the session's
 	// lock, and the SDK's http.Client has NO Timeout of its own, so a Caido that
 	// accepts a connection and never answers would hold that lock forever - and
-	// an MCP tool call frequently arrives with no deadline at all. A bounded
-	// holder is also what makes waiting for the lock bounded.
+	// an MCP tool call frequently arrives with no deadline at all.
+	//
+	// Stated precisely, because the loose version of this claim is wrong:
+	// sync.Mutex.Lock does not take a context, so a waiter's OWN deadline does
+	// not bound its wait. What this bounds is each holder, so a waiter waits at
+	// most (queue ahead of it) x (that bound) - finite, never deadlocked, but
+	// capable of outliving the caller's own timeout when several sends queue on
+	// one session and Caido is hung. Accepted rather than fixed: the queue is
+	// short in practice (batch_send uses the pool, not the shared session; six
+	// concurrent sends measured 0.78 s end to end), and a context-aware lock
+	// would be new machinery refusing sends that were about to get their turn.
 	sendOverallTimeout = 60 * time.Second
 
 	// DefaultSendPollTimeout is how long a single tool call waits for its
@@ -45,6 +53,13 @@ const (
 	// because the retry count is a FALLBACK cap and not a deadline.
 	DefaultSendPollTimeout = 10 * time.Second
 )
+
+// PollMaxRetries caps a poll that was given NO deadline. Its backoff sums to
+// 8.75 s. It is a var rather than a const for one reason: a const makes the
+// deadline-over-count rule untestable without a ~9 s test, and an untested
+// bound is how this one came to be dead text for batch_send in the first
+// place. Production never assigns it.
+var PollMaxRetries = 20
 
 // HTTPKind is the only replay session kind this server creates.
 //
@@ -340,9 +355,17 @@ type SendState struct {
 	// this process cannot lock - the operator's Caido UI, a second MCP client,
 	// the CLI - can select an EXISTING entry and move the pointer without
 	// sending anything, and "it moved" alone would then hand this caller
-	// someone else's request and response. Caido returns the first 100 entries,
-	// so on a very long session this degrades back to the positional rule
-	// rather than becoming wrong.
+	// someone else's request and response.
+	//
+	// The window is the NEWEST 100 entries, and which end it takes was
+	// measured, not assumed: against 0.58.3 on 2026-10-02, entries(first:N)
+	// returns the OLDEST N and entries(last:N) the NEWEST N. The SDK query
+	// originally said first:100, which meant that once a shared session passed
+	// 100 entries the baseline covered only ancient history - the guard was
+	// still in the code and had quietly stopped guarding. With last:100 it does
+	// not erode: StartTask APPENDS, so this send's own entry is newer than
+	// every id in the window whatever the session's length, and a foreign
+	// writer's selection is in it unless it reached more than 100 entries back.
 	preEntries map[string]bool
 
 	// strict is set when the pre-send baseline could NOT be read. With no

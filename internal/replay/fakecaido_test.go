@@ -56,14 +56,32 @@ type fakeCaido struct {
 	// noResponse leaves the appended entry without a response, so the poll
 	// never completes.
 	noResponse bool
+	// answerAfterReads, with noResponse, makes the answer arrive LATE: the
+	// appended entry gets its response on the Nth read of its session after
+	// the task started. It exists to separate "the poll kept waiting because
+	// its deadline said so" from "the poll stopped at the retry count", which
+	// is otherwise only observable in a test that waits out 8.75 s.
+	answerAfterReads int
 	// failReads fails the next N session/entry reads, counting down.
 	failReads int
 	// failCreate makes createReplaySession fail.
 	failCreate bool
-	// moveActiveTo redirects a session's active pointer to an EXISTING entry
-	// before the next read, standing in for another writer (the Caido UI, a
-	// second client) that this process cannot lock.
-	moveActiveTo map[string]string
+	// moveActiveTo redirects a session's active pointer to an EXISTING entry,
+	// standing in for another writer (the Caido UI, a second client) that this
+	// process cannot lock. afterReads is load-bearing: the move has to land
+	// DURING a send's poll, because a move that happens before the send's own
+	// pre-send read just becomes that send's baseline and answered()'s
+	// preEntries branch is never reached. The first version of this knob moved
+	// the pointer immediately, and the test built on it passed with the guard
+	// deleted - found by mutation-testing the tests themselves.
+	moveActiveTo map[string]pointerMove
+}
+
+// pointerMove is a foreign writer's pointer move, delayed by afterReads
+// reads of that session so it can be made to land mid-poll.
+type pointerMove struct {
+	to         string
+	afterReads int
 }
 
 type fakeSession struct {
@@ -74,6 +92,8 @@ type fakeSession struct {
 	connClose bool
 	updateCL  bool
 	running   bool
+	// answerIn counts reads down to the late answer; -1 means never.
+	answerIn int
 }
 
 type fakeEntry struct {
@@ -313,9 +333,24 @@ func (f *fakeCaido) getSession(vars json.RawMessage) (any, error) {
 	if s == nil {
 		return map[string]any{"replaySession": nil}, nil
 	}
-	if to, ok := f.moveActiveTo[s.id]; ok {
-		s.activeID = to
-		delete(f.moveActiveTo, s.id)
+	if s.answerIn > 0 {
+		s.answerIn--
+		if s.answerIn == 0 {
+			if e := f.entries[s.activeID]; e != nil && !e.hasResp {
+				f.nextR++
+				e.hasResp = true
+				e.respID = fmt.Sprintf("r%d", f.nextR)
+			}
+		}
+	}
+	if mv, ok := f.moveActiveTo[s.id]; ok {
+		if mv.afterReads > 0 {
+			mv.afterReads--
+			f.moveActiveTo[s.id] = mv
+		} else {
+			s.activeID = mv.to
+			delete(f.moveActiveTo, s.id)
+		}
 	}
 	edges := []any{}
 	for _, eid := range s.entryIDs {
@@ -537,6 +572,7 @@ func (f *fakeCaido) startTask(vars json.RawMessage) (any, error) {
 		ne.respID = fmt.Sprintf("r%d", f.nextR)
 	}
 	f.entries[nid] = ne
+	s.answerIn = f.answerAfterReads
 	s.entryIDs = append(s.entryIDs, nid)
 	s.activeID = nid
 	return map[string]any{"startReplayTask": map[string]any{

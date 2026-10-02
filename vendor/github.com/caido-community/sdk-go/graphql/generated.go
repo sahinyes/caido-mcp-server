@@ -25774,7 +25774,7 @@ query GetReplaySession ($id: ID!) {
 				connectionClose
 				updateContentLength
 			}
-			entries(first: 100) {
+			entries(last: 100) {
 				edges {
 					node {
 						__typename

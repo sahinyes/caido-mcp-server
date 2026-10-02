@@ -411,29 +411,40 @@ func TestSend_AbandonsSharedSessionAfterProjectSwitch(t *testing.T) {
 // not proof on its own. Another writer this process cannot lock - the operator's
 // Caido UI, a second MCP client - can move the pointer to an EXISTING entry,
 // and accepting that hands this caller someone else's request and response.
-func TestSend_IgnoresActivePointerMovedToAnOlderEntry(t *testing.T) {
+func TestSend_IgnoresAnEntryAnotherWriterPointedAt(t *testing.T) {
 	f, client := newFakeCaido(t)
 	ctx := context.Background()
 
-	// Two completed sends, so the session holds an older entry that is READY.
-	if _, err := sendProbe(ctx, client, "", "old-1", 5*time.Second); err != nil {
+	// Two completed sends, so the session holds a READY entry that is not the
+	// active one.
+	first, err := sendProbe(ctx, client, "", "old-1", 5*time.Second)
+	if err != nil {
 		t.Fatalf("first send: %v", err)
 	}
-	old, err := sendProbe(ctx, client, "", "old-2", 5*time.Second)
+	session := first.SessionID
+	second, err := sendProbe(ctx, client, session, "old-2", 5*time.Second)
 	if err != nil {
 		t.Fatalf("second send: %v", err)
 	}
-	session := old.SessionID
-	olderEntry := old.EntryID
+	// The entry the foreign writer will select. MEASURED, never an id literal
+	// and never an offset from another id - note 21's rule applied to the test.
+	foreign := first.EntryID
+	if foreign == "" || foreign == second.EntryID {
+		t.Fatalf(
+			"test setup: need a ready entry that is not the active one, got "+
+				"foreign=%q active=%q", foreign, second.EntryID,
+		)
+	}
 
-	// The third send gets no answer of its own, and meanwhile the pointer is
-	// moved back to that older, answered entry.
+	// The third send gets no answer of its own, and the pointer is moved to
+	// that older entry AFTER the send's own pre-send read - the only timing in
+	// which the guard under test runs. afterReads=1 consumes exactly that read.
 	f.mu.Lock()
 	f.noResponse = true
-	f.moveActiveTo = map[string]string{session: olderEntry}
+	f.moveActiveTo = map[string]pointerMove{session: {to: foreign, afterReads: 1}}
 	f.mu.Unlock()
 
-	out, err := sendProbe(ctx, client, session, "mine", 400*time.Millisecond)
+	out, err := sendProbe(ctx, client, session, "mine", 600*time.Millisecond)
 	if err != nil {
 		t.Fatalf("third send: %v", err)
 	}
@@ -446,5 +457,56 @@ func TestSend_IgnoresActivePointerMovedToAnOlderEntry(t *testing.T) {
 	}
 	if out.PollErr == nil {
 		t.Error("expected the poll to report that no answer arrived")
+	}
+	// Proof the move actually landed: without it the guard is never exercised
+	// and this test would pass on a build with the guard deleted.
+	f.mu.Lock()
+	moved := len(f.moveActiveTo) == 0
+	f.mu.Unlock()
+	if !moved {
+		t.Fatal(
+			"the foreign pointer move never happened, so nothing was tested " +
+				"(not enough reads before the poll timeout?)",
+		)
+	}
+}
+
+func TestSend_KeepsPollingPastTheRetryCountWhenItHasADeadline(t *testing.T) {
+	// PollMaxRetries is a FALLBACK for a caller who brought no deadline. While
+	// it was the only bound, batch_send's declared 15 s window per request was
+	// dead text - it got the count's 8.75 s - so a target answering in 10 s was
+	// reported as a timeout AND cost the batch a pool slot.
+	//
+	// Shrinking the count is what makes this provable in milliseconds instead
+	// of nine seconds: the answer is arranged to arrive on a read the count
+	// would never reach, including the one late read Send does after a poll
+	// gives up.
+	restore := PollMaxRetries
+	PollMaxRetries = 2
+	t.Cleanup(func() { PollMaxRetries = restore })
+
+	f, client := newFakeCaido(t)
+	f.mu.Lock()
+	f.noResponse = true
+	f.answerAfterReads = 5
+	f.mu.Unlock()
+
+	out, err := sendProbe(
+		context.Background(), client, "", "late", 3*time.Second,
+	)
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	if out.PollErr != nil {
+		t.Fatalf(
+			"the poll gave up at the retry count instead of honouring its "+
+				"3s deadline: %v", out.PollErr,
+		)
+	}
+	if out.Entry == nil {
+		t.Fatal("no entry returned")
+	}
+	if got := marker(out.Entry.Request.Raw); got != "late" {
+		t.Fatalf("answered with another send's bytes: marker %q", got)
 	}
 }

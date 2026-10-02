@@ -1,5 +1,11 @@
-# Binaries
-caido-mcp-server
+# Binaries. ANCHORED (leading /) on purpose: the bare patterns `mcp` and `cli`
+# matched every directory of those names anywhere in the tree, including
+# vendor/github.com/modelcontextprotocol/go-sdk/mcp - so 23 files of the MCP
+# SDK's core package were silently never committed and a fresh clone could not
+# build (`go build -mod=vendor ./...` -> "cannot find module providing package
+# .../go-sdk/mcp"). The working tree built fine, because go mod vendor had put
+# the files there locally.
+/caido-mcp-server
 Caido-CLI/caido
 dist/
 *.exe
@@ -12,5 +18,5 @@ dist/
 ~/.caido-mcp/
 .claude/
 
-mcp
-cli
+/mcp
+/cli

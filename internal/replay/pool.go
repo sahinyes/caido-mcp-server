@@ -15,17 +15,20 @@ const (
 	// on a detached context because the request that retired the session has
 	// usually just lost its own deadline.
 	retireTimeout = 10 * time.Second
-
-	// cleanupTimeout bounds deleting a batch's sessions.
-	//
-	// Cleanup runs on a context detached from the caller's - the batch is over
-	// and its deadline usually with it - and the SDK's http.Client has no
-	// Timeout of its own, so without this the final round trip of every batch
-	// was bounded by nothing at all: a Caido that accepts the connection and
-	// never answers would hold RunBatch open forever, after every result was
-	// already in hand.
-	cleanupTimeout = 15 * time.Second
 )
+
+// cleanupTimeout bounds deleting a batch's sessions.
+//
+// Cleanup runs on a context detached from the caller's - the batch is over
+// and its deadline usually with it - and the SDK's http.Client has no
+// Timeout of its own, so without this the final round trip of every batch
+// was bounded by nothing at all: a Caido that accepts the connection and
+// never answers would hold RunBatch open forever, after every result was
+// already in hand.
+//
+// A var, not a const, so a test can shrink it: see sendOverallTimeout.
+// Production never assigns it.
+var cleanupTimeout = 15 * time.Second
 
 // ErrPoolDrained is returned by Acquire when every session has been retired and
 // none could be replaced.

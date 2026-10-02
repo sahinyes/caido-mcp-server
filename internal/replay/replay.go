@@ -29,30 +29,35 @@ const (
 	// lateReadTimeout bounds the one last read done after a poll gives up.
 	lateReadTimeout = 2 * time.Second
 
-	// sendOverallTimeout bounds a whole send when the caller brought no
-	// deadline.
-	//
-	// It is not a nicety. Everything in Send runs while holding the session's
-	// lock, and the SDK's http.Client has NO Timeout of its own, so a Caido that
-	// accepts a connection and never answers would hold that lock forever - and
-	// an MCP tool call frequently arrives with no deadline at all.
-	//
-	// Stated precisely, because the loose version of this claim is wrong:
-	// sync.Mutex.Lock does not take a context, so a waiter's OWN deadline does
-	// not bound its wait. What this bounds is each holder, so a waiter waits at
-	// most (queue ahead of it) x (that bound) - finite, never deadlocked, but
-	// capable of outliving the caller's own timeout when several sends queue on
-	// one session and Caido is hung. Accepted rather than fixed: the queue is
-	// short in practice (batch_send uses the pool, not the shared session; six
-	// concurrent sends measured 0.78 s end to end), and a context-aware lock
-	// would be new machinery refusing sends that were about to get their turn.
-	sendOverallTimeout = 60 * time.Second
-
 	// DefaultSendPollTimeout is how long a single tool call waits for its
 	// answer. It used to be implicit in PollMaxRetries; it is explicit now,
 	// because the retry count is a FALLBACK cap and not a deadline.
 	DefaultSendPollTimeout = 10 * time.Second
 )
+
+// sendOverallTimeout bounds a whole send when the caller brought no
+// deadline.
+//
+// It is not a nicety. Everything in Send runs while holding the session's
+// lock, and the SDK's http.Client has NO Timeout of its own, so a Caido that
+// accepts a connection and never answers would hold that lock forever - and
+// an MCP tool call frequently arrives with no deadline at all.
+//
+// Stated precisely, because the loose version of this claim is wrong:
+// sync.Mutex.Lock does not take a context, so a waiter's OWN deadline does
+// not bound its wait. What this bounds is each holder, so a waiter waits at
+// most (queue ahead of it) x (that bound) - finite, never deadlocked, but
+// capable of outliving the caller's own timeout when several sends queue on
+// one session and Caido is hung. Accepted rather than fixed: the queue is
+// short in practice (batch_send uses the pool, not the shared session; six
+// concurrent sends measured 0.78 s end to end), and a context-aware lock
+// would be new machinery refusing sends that were about to get their turn.
+//
+// Like PollMaxRetries it is a var, and for the same reason: as a const this
+// bound could only be tested by a test that waits a minute, and a bound
+// nothing exercises is how the two hang-protections in this package came to
+// exist without a single test between them. Production never assigns it.
+var sendOverallTimeout = 60 * time.Second
 
 // PollMaxRetries caps a poll that was given NO deadline. Its backoff sums to
 // 8.75 s. It is a var rather than a const for one reason: a const makes the

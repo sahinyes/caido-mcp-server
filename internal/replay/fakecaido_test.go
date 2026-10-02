@@ -53,6 +53,17 @@ type fakeCaido struct {
 	startTaskErr func(sessionID string) (string, bool)
 	// startTaskNoTask makes the payload carry neither a task nor an error.
 	startTaskNoTask bool
+	// hangOn makes the named operations accept the request and never answer,
+	// which is the shape the SDK has no defence against on its own: its
+	// http.Client carries no Timeout, so every wait is bounded only by what
+	// this package puts around it.
+	//
+	// hangRelease exists so a test that fails BECAUSE the bound is missing can
+	// still shut its server down - httptest.Server.Close waits for outstanding
+	// requests, so an unbounded wait would otherwise hang the test binary after
+	// the failure was already reported.
+	hangOn      map[string]bool
+	hangRelease chan struct{}
 	// noResponse leaves the appended entry without a response, so the poll
 	// never completes.
 	noResponse bool
@@ -192,7 +203,17 @@ func (f *fakeCaido) serve(w http.ResponseWriter, r *http.Request) {
 
 	f.mu.Lock()
 	f.ops = append(f.ops, body.OpName)
+	hang := f.hangOn[body.OpName]
+	release := f.hangRelease
 	f.mu.Unlock()
+
+	if hang {
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+		return
+	}
 
 	var data any
 	var err error

@@ -28,6 +28,11 @@ type GetReplayEntryOutput struct {
 	IsTLS       bool                    `json:"isTls,omitempty"`
 	StatusCode  int                     `json:"statusCode,omitempty"`
 	RoundtripMs int                     `json:"roundtripMs,omitempty"`
+	// Error is the entry's own failure: connection refused, TLS handshake
+	// failure, reset, DNS. It was never surfaced, so an entry that failed
+	// outright came back as a well-formed answer with no response - which
+	// reads as "still in flight" and sends the caller back to poll forever.
+	Error string `json:"error,omitempty"`
 }
 
 // getReplayEntryHandler creates the handler function
@@ -66,6 +71,10 @@ func getReplayEntryHandler(
 
 		output := GetReplayEntryOutput{ID: entry.ID}
 
+		if entry.Error != nil && *entry.Error != "" {
+			output.Error = *entry.Error
+		}
+
 		if entry.Raw != "" {
 			decoded, decErr := base64.StdEncoding.DecodeString(
 				entry.Raw,
@@ -99,6 +108,6 @@ func RegisterGetReplayEntryTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_get_replay_entry",
-		Description: `Get replay entry with full request and response content. Use after send_request timeout to retrieve results.`,
+		Description: `Get replay entry with full request and response content. Use after a send_request timeout to retrieve results. A failed send reports why in the error field (connection refused, TLS failure, reset) with no response - that is a final answer, not a pending one.`,
 	}, getReplayEntryHandler(client))
 }

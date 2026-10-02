@@ -2,11 +2,14 @@ package replay
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	caido "github.com/caido-community/sdk-go"
+	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 func strPtr(s string) *string { return &s }
@@ -307,5 +310,265 @@ func TestPlaceholderIdentifiesItself(t *testing.T) {
 	}
 	if placeholderPort != 1 {
 		t.Fatalf("placeholder port must stay 1, got %d", placeholderPort)
+	}
+}
+
+// --- answered, with no readable baseline (strict) ---
+//
+// When the pre-send read of the entry fails there is no PrevResponseID to
+// compare against, and "its response is not the one we saw before" silently
+// becomes "any ready entry counts" - which hands back the previous request's
+// response as this send's. strict demands the stronger evidence instead.
+
+func TestAnswered_Strict_InPlaceIsNotAnAnswer(t *testing.T) {
+	st := SendState{SessionID: "s", EntryID: "e1", strict: true}
+	if answered(respEntry("e1", "r9"), st, "e1") {
+		t.Fatal("with no baseline, an unchanged active entry must not count")
+	}
+}
+
+func TestAnswered_Strict_ChangedActiveEntryStillCounts(t *testing.T) {
+	st := SendState{SessionID: "s", EntryID: "e1", strict: true}
+	if !answered(respEntry("e2", "r9"), st, "e2") {
+		t.Fatal("a changed active entry can only be this send")
+	}
+}
+
+func TestAnswered_NonStrict_FirstResponseOnEntryCounts(t *testing.T) {
+	// The mirror case: the baseline WAS read and the entry simply had no
+	// response yet. That is not the same as an unreadable baseline.
+	st := SendState{SessionID: "s", EntryID: "e1"}
+	if !answered(respEntry("e1", "r1"), st, "e1") {
+		t.Fatal("a read baseline that was empty must still allow in-place")
+	}
+}
+
+// --- per-session locking ---
+
+func TestLockSession_SerialisesSameSession(t *testing.T) {
+	const goroutines = 8
+	var (
+		mu       sync.Mutex
+		inFlight int
+		maxSeen  int
+	)
+	var wg sync.WaitGroup
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			release := lockSession("same")
+			defer release()
+
+			mu.Lock()
+			inFlight++
+			if inFlight > maxSeen {
+				maxSeen = inFlight
+			}
+			mu.Unlock()
+
+			time.Sleep(time.Millisecond)
+
+			mu.Lock()
+			inFlight--
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	if maxSeen != 1 {
+		t.Fatalf(
+			"two sends held one session at once (max in flight %d)", maxSeen,
+		)
+	}
+}
+
+func TestLockSession_DifferentSessionsRunInParallel(t *testing.T) {
+	// batch_send's whole design is one session per concurrent request, so the
+	// lock must not serialise across sessions. Each goroutine waits for the
+	// other to be holding its own lock; if the locks were shared this
+	// deadlocks and the test fails on the timeout instead of hanging.
+	aHeld := make(chan struct{})
+	bHeld := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		release := lockSession("a")
+		defer release()
+		close(aHeld)
+		<-bHeld
+		done <- struct{}{}
+	}()
+	go func() {
+		release := lockSession("b")
+		defer release()
+		close(bHeld)
+		<-aHeld
+		done <- struct{}{}
+	}()
+
+	for range 2 {
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("sends on different sessions were serialised")
+		}
+	}
+}
+
+func TestLockSession_ReleaseIsIdempotentAndForgetsTheEntry(t *testing.T) {
+	release := lockSession("transient")
+
+	sessionLocksMu.Lock()
+	_, present := sessionLocks["transient"]
+	sessionLocksMu.Unlock()
+	if !present {
+		t.Fatal("a held lock must be in the map")
+	}
+
+	release()
+	release() // a double release must not unlock someone else's turn
+
+	sessionLocksMu.Lock()
+	_, present = sessionLocks["transient"]
+	sessionLocksMu.Unlock()
+	if present {
+		t.Fatal("an unheld lock must be dropped, or the map grows forever")
+	}
+}
+
+func TestLockSession_WaiterKeepsTheEntryAlive(t *testing.T) {
+	first := lockSession("shared")
+
+	waiting := make(chan struct{})
+	got := make(chan func(), 1)
+	go func() {
+		close(waiting)
+		got <- lockSession("shared")
+	}()
+	<-waiting
+
+	// Give the waiter time to register its reference, then prove that
+	// releasing the holder does not delete an entry someone is queued on -
+	// which would hand the next arrival a DIFFERENT mutex for the same
+	// session, i.e. no mutual exclusion at all.
+	time.Sleep(50 * time.Millisecond)
+	first()
+
+	select {
+	case release := <-got:
+		release()
+	case <-time.After(5 * time.Second):
+		t.Fatal("the queued waiter never acquired the lock")
+	}
+
+	sessionLocksMu.Lock()
+	_, present := sessionLocks["shared"]
+	sessionLocksMu.Unlock()
+	if present {
+		t.Fatal("the entry must be gone once nobody holds or waits")
+	}
+}
+
+// --- startReplayTask payload errors ---
+//
+// The mutation answers with a payload whose error is OPTIONAL, so four of the
+// five variants used to arrive as err == nil: the task never started, nothing
+// was sent, and the only symptom was "timed out waiting for response" 8.75 s
+// later with the real reason discarded where it was known.
+
+func taskResp(
+	e gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError,
+) *gen.StartReplayTaskResponse {
+	resp := &gen.StartReplayTaskResponse{}
+	if e != nil {
+		resp.StartReplayTask.Error = &e
+	}
+	return resp
+}
+
+func TestTaskPayloadError_NilAndEmptyAreNotErrors(t *testing.T) {
+	if err := taskPayloadError(nil); err != nil {
+		t.Fatalf("nil response: %v", err)
+	}
+	if err := taskPayloadError(taskResp(nil)); err != nil {
+		t.Fatalf("no payload error: %v", err)
+	}
+}
+
+func TestTaskPayloadError_AllFiveVariantsSurface(t *testing.T) {
+	cases := []struct {
+		name string
+		err  gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorStartReplayTaskError
+		want string
+		busy bool
+	}{
+		{
+			name: "TaskInProgressUserError",
+			err: &gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError{
+				Typename: strPtr("TaskInProgressUserError"),
+			},
+			want: "already running a task",
+			busy: true,
+		},
+		{
+			name: "UnknownIdUserError",
+			err: &gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorUnknownIdUserError{
+				Typename: strPtr("UnknownIdUserError"),
+			},
+			want: "UnknownIdUserError",
+		},
+		{
+			name: "PermissionDeniedUserError",
+			err: &gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorPermissionDeniedUserError{
+				Typename: strPtr("PermissionDeniedUserError"),
+			},
+			want: "PermissionDeniedUserError",
+		},
+		{
+			name: "CloudUserError",
+			err: &gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorCloudUserError{
+				Typename: strPtr("CloudUserError"),
+			},
+			want: "CloudUserError",
+		},
+		{
+			name: "OtherUserError",
+			err: &gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorOtherUserError{
+				Typename: strPtr("OtherUserError"),
+				Code:     "out_of_scope",
+			},
+			want: "out_of_scope",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := taskPayloadError(taskResp(tc.err))
+			if err == nil {
+				t.Fatal("payload refusal reported as success")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+			if tc.busy != errors.Is(err, ErrTaskInProgress) {
+				t.Fatalf(
+					"ErrTaskInProgress=%v for %s", !tc.busy, tc.name,
+				)
+			}
+			if !tc.busy && !errors.Is(err, ErrStartTaskRefused) {
+				t.Fatalf("%s must wrap ErrStartTaskRefused", tc.name)
+			}
+		})
+	}
+}
+
+func TestTaskPayloadError_MissingTypenameStillReports(t *testing.T) {
+	err := taskPayloadError(taskResp(
+		&gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorCloudUserError{},
+	))
+	if err == nil {
+		t.Fatal("a refusal with no __typename must still be an error")
+	}
+	if !strings.Contains(err.Error(), "unknown error") {
+		t.Fatalf("unexpected message: %v", err)
 	}
 }

@@ -266,3 +266,68 @@ func BenchmarkApplyModifications_WithOverrides(b *testing.B) {
 		applyModifications(parsed, input)
 	}
 }
+
+// --- setHeaders is "add or replace", so repeats must collapse ---
+
+func TestApplyModifications_OverrideCollapsesRepeatedHeader(t *testing.T) {
+	raw := "GET / HTTP/1.1\r\nHost: example.com\r\n" +
+		"Cookie: a=1\r\nCookie: b=2\r\n\r\n"
+	parsed := parseTestRequest(raw)
+
+	result := applyModifications(parsed, ReplayRequestInput{
+		SetHeaders: map[string]string{"Cookie": "session=new"},
+	})
+
+	if got := strings.Count(result, "Cookie: session=new"); got != 1 {
+		t.Fatalf("override written %d times, want 1:\n%s", got, result)
+	}
+	if strings.Contains(result, "a=1") || strings.Contains(result, "b=2") {
+		t.Fatalf("original values survived the replace:\n%s", result)
+	}
+}
+
+func TestApplyModifications_RepeatedHeaderWithoutOverrideIsPreserved(t *testing.T) {
+	// The collapse applies to the OVERRIDE only: a request that legitimately
+	// carries a header twice and is not overriding it must keep both.
+	raw := "GET / HTTP/1.1\r\nHost: example.com\r\n" +
+		"Set-Cookie: a=1\r\nSet-Cookie: b=2\r\n\r\n"
+	parsed := parseTestRequest(raw)
+
+	result := applyModifications(parsed, ReplayRequestInput{
+		SetHeaders: map[string]string{"X-Probe": "1"},
+	})
+
+	if !strings.Contains(result, "Set-Cookie: a=1") ||
+		!strings.Contains(result, "Set-Cookie: b=2") {
+		t.Fatalf("a repeated header was collapsed:\n%s", result)
+	}
+}
+
+// --- wantsRewrite decides verbatim-vs-rebuild ---
+
+func TestWantsRewrite_ConnectionOverridesAreNotRewrites(t *testing.T) {
+	tls := true
+	in := ReplayRequestInput{
+		ID: "1", Host: "other.example", Port: 8443, TLS: &tls,
+		BodyLimit: 10, BodyOffset: 5, SessionID: "7",
+	}
+	if wantsRewrite(in) {
+		t.Fatal("retargeting the same bytes must not rebuild the request")
+	}
+}
+
+func TestWantsRewrite_EachByteChangingOverride(t *testing.T) {
+	empty := ""
+	cases := map[string]ReplayRequestInput{
+		"method":        {Method: "POST"},
+		"path":          {Path: "/x"},
+		"body":          {Body: &empty},
+		"setHeaders":    {SetHeaders: map[string]string{"A": "b"}},
+		"removeHeaders": {RemoveHeaders: []string{"A"}},
+	}
+	for name, in := range cases {
+		if !wantsRewrite(in) {
+			t.Errorf("%s changes the bytes and must rebuild", name)
+		}
+	}
+}

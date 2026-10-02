@@ -25,14 +25,23 @@ type TimingRequestInput struct {
 	PayloadField string   `json:"payloadField,omitempty" jsonschema:"Placeholder string in raw body to substitute each payload into (e.g. PAYLOAD_HERE)"`
 }
 
-// TimingSample is a single request timing observation
+// TimingSample is a single request timing observation.
+//
+// The measurement is Caido's OWN roundtrip, not the client wall clock. The
+// client clock cannot answer this tool's question: a send is not a blocking
+// call any more, it is a draft, a start and then a POLL at 50, 100, 200, 400,
+// 500... ms, so every client-side number is quantised to that grid. Two
+// payloads differing by 300 ms can land in the same bucket and read as
+// identical, which is exactly the comparison a sleep oracle needs. The client
+// total is kept beside it, named for what it is, because it is still the right
+// number for "how long did this tool take".
 type TimingSample struct {
-	Index     int    `json:"index"`
-	Payload   string `json:"payload,omitempty"`
-	ElapsedNs int64  `json:"elapsed_ns"`           // client-side monotonic clock
-	ElapsedMs int    `json:"elapsed_ms,omitempty"` // server-side Caido RoundtripTime (reference)
-	Status    int    `json:"statusCode,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Index         int    `json:"index"`
+	Payload       string `json:"payload,omitempty"`
+	RoundtripNs   int64  `json:"roundtrip_ns"`    // Caido's measurement (ms resolution)
+	ClientTotalNs int64  `json:"client_total_ns"` // MCP + SDK + poll grid
+	Status        int    `json:"statusCode,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 // TimingSummary holds aggregate stats across all samples (nanoseconds)
@@ -104,20 +113,24 @@ func timeRequestHandler(
 
 				start := time.Now()
 				result, err := executeSendRequest(ctx, client, sendInput)
-				elapsedNs := time.Since(start).Nanoseconds()
+				clientNs := time.Since(start).Nanoseconds()
 
 				sample := TimingSample{
-					Index:   idx,
-					Payload: payload,
+					Index:         idx,
+					Payload:       payload,
+					ClientTotalNs: clientNs,
 				}
 				if err != nil {
 					sample.Error = err.Error()
 				} else {
-					sample.ElapsedNs = elapsedNs
-					sample.ElapsedMs = result.ElapsedMs
+					roundtripNs := int64(result.ElapsedMs) *
+						int64(time.Millisecond)
+					sample.RoundtripNs = roundtripNs
 					sample.Status = result.StatusCode
-					allNs = append(allNs, elapsedNs)
-					perPayload[payload] = append(perPayload[payload], elapsedNs)
+					allNs = append(allNs, roundtripNs)
+					perPayload[payload] = append(
+						perPayload[payload], roundtripNs,
+					)
 				}
 
 				allSamples = append(allSamples, sample)
@@ -201,9 +214,11 @@ func RegisterTimeRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "caido_time_request",
-		Description: `Send a request N times and measure response timing (ns, client-side monotonic clock). ` +
-			`Includes MCP+SDK overhead in measurement (~50-200ms typical). ` +
-			`Server-side Caido RoundtripTime (ms) also returned per sample for comparison. ` +
+		Description: `Send a request N times and measure response timing. ` +
+			`roundtrip_ns and every summary/per_payload number is CAIDO's own roundtrip ` +
+			`(ms resolution, no MCP or SDK overhead). client_total_ns is this tool's ` +
+			`wall clock and is quantised by the response poll schedule (50-500ms), ` +
+			`so do not compare payloads with it. ` +
 			`Use payloads+payloadField for A/B timing (sleep oracle detection). ` +
 			`Statistical filtering via median/p95 recommended for sub-second delay detection.`,
 	}, timeRequestHandler(client))

@@ -282,6 +282,14 @@ func (s *ReplaySDK) CreateSession(
 	if err != nil {
 		return "", "", err
 	}
+	// The payload's error is OPTIONAL, so a refusal arrives with err == nil and
+	// a nil session. Until this was selected, every one of them - permission
+	// denied, a cloud restriction, an unknown collection id - came back as the
+	// same "returned no session", which reads like an SDK bug rather than an
+	// answer from Caido.
+	if perr := createSessionPayloadError(resp); perr != nil {
+		return "", "", perr
+	}
 	if resp.CreateReplaySession.Session == nil {
 		return "", "", fmt.Errorf("create replay session returned no session")
 	}
@@ -318,6 +326,30 @@ func NewRawRequestSource(
 // CreateSessionWithRaw creates a replay session seeded with a raw HTTP
 // request (base64-encoded), so the session has an active entry ready to
 // send. Returns the session ID and the seeded entry's ID.
+// createSessionPayloadError turns createReplaySession's payload error into a Go
+// error. The union has three members (PermissionDenied, Cloud, Other).
+func createSessionPayloadError(resp *gen.CreateReplaySessionResponse) error {
+	if resp == nil {
+		return nil
+	}
+	errPtr := resp.CreateReplaySession.GetError()
+	if errPtr == nil || *errPtr == nil {
+		return nil
+	}
+	v := *errPtr
+	name := "unknown error"
+	if tn := v.GetTypename(); tn != nil && *tn != "" {
+		name = *tn
+	}
+	if other, ok := v.(*gen.CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError); ok {
+		return fmt.Errorf(
+			"create replay session refused: %s (code %s)",
+			name, other.GetCode(),
+		)
+	}
+	return fmt.Errorf("create replay session refused: %s", name)
+}
+
 func (s *ReplaySDK) CreateSessionWithRaw(
 	ctx context.Context, conn ReplayConnection, rawBase64 string,
 ) (sessionID, activeEntryID string, err error) {

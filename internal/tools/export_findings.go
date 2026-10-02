@@ -98,6 +98,11 @@ type ExportFindingsOutput struct {
 	ExportID string `json:"exportId,omitempty"`
 	Content  string `json:"content,omitempty"`
 	Format   string `json:"format,omitempty"`
+	// Warning names what the export could NOT deliver: requested ids that no
+	// page contained, or a page cap reached while findings remained. A
+	// formatted export that silently returns fewer findings than were asked
+	// for is indistinguishable from "those findings do not exist".
+	Warning string `json:"warning,omitempty"`
 }
 
 func exportFindingsHandler(
@@ -116,7 +121,7 @@ func exportFindingsHandler(
 
 		format := strings.ToLower(input.Format)
 		if format == "json" || format == "markdown" || format == "csv" {
-			content, err := exportFindingsFormatted(
+			content, warning, err := exportFindingsFormatted(
 				ctx, client, input.IDs, input.Reporter, format,
 			)
 			if err != nil {
@@ -125,6 +130,7 @@ func exportFindingsHandler(
 			return nil, ExportFindingsOutput{
 				Content: content,
 				Format:  format,
+				Warning: warning,
 			}, nil
 		}
 
@@ -170,56 +176,114 @@ type exportedFinding struct {
 	Description *string `json:"description,omitempty"`
 }
 
+const (
+	// exportPageSize is findings per page.
+	exportPageSize = 100
+	// exportMaxPages bounds the walk. It is a stop, not a silent cap: hitting
+	// it is reported in the output.
+	exportMaxPages = 50
+)
+
+// exportFindingsFormatted collects findings for the inline formats.
+//
+// It FOLLOWS pagination. The first version asked for one page of 100 and then
+// filtered client-side by id, so a request for three ids that happened to sit
+// on page 2 came back empty and well-formed - the agent reads that as "no such
+// findings", and the findings list grows past 100 in a week of real use. It
+// also returns a warning rather than quietly delivering less than was asked
+// for.
 func exportFindingsFormatted(
 	ctx context.Context,
 	client *caido.Client,
 	ids []string,
 	reporter string,
 	format string,
-) (string, error) {
+) (string, string, error) {
 	idSet := make(map[string]bool, len(ids))
 	for _, id := range ids {
 		idSet[id] = true
 	}
 
-	limit := 100
-	opts := &caido.ListFindingsOptions{First: &limit}
-	if reporter != "" {
-		opts.Filter = &gen.FilterClauseFindingInput{
-			Reporter: &reporter,
-		}
-	}
-
-	resp, err := client.Findings.List(ctx, opts)
-	if err != nil {
-		return "", fmt.Errorf("failed to list findings: %w", err)
-	}
-
+	limit := exportPageSize
+	var cursor *string
 	var findings []exportedFinding
-	for _, edge := range resp.Findings.Edges {
-		f := edge.Node
-		if len(idSet) > 0 && !idSet[f.Id] {
-			continue
+	found := make(map[string]bool, len(idSet))
+	truncated := false
+
+	for page := 0; ; page++ {
+		if page >= exportMaxPages {
+			truncated = true
+			break
 		}
-		findings = append(findings, exportedFinding{
-			ID:          f.Id,
-			Title:       f.Title,
-			Host:        f.Host,
-			Path:        f.Path,
-			Reporter:    f.Reporter,
-			CreatedAt:   time.UnixMilli(f.CreatedAt).Format(time.RFC3339),
-			RequestID:   f.Request.Id,
-			Description: f.Description,
-		})
+		opts := &caido.ListFindingsOptions{First: &limit, After: cursor}
+		if reporter != "" {
+			opts.Filter = &gen.FilterClauseFindingInput{
+				Reporter: &reporter,
+			}
+		}
+
+		resp, err := client.Findings.List(ctx, opts)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to list findings: %w", err)
+		}
+
+		for _, edge := range resp.Findings.Edges {
+			f := edge.Node
+			if len(idSet) > 0 && !idSet[f.Id] {
+				continue
+			}
+			found[f.Id] = true
+			findings = append(findings, exportedFinding{
+				ID:          f.Id,
+				Title:       f.Title,
+				Host:        f.Host,
+				Path:        f.Path,
+				Reporter:    f.Reporter,
+				CreatedAt:   time.UnixMilli(f.CreatedAt).Format(time.RFC3339),
+				RequestID:   f.Request.Id,
+				Description: f.Description,
+			})
+		}
+
+		// Every requested id is in hand: no reason to walk the rest.
+		if len(idSet) > 0 && len(found) == len(idSet) {
+			break
+		}
+		if !resp.Findings.PageInfo.HasNextPage ||
+			resp.Findings.PageInfo.EndCursor == nil {
+			break
+		}
+		cursor = resp.Findings.PageInfo.EndCursor
 	}
+
+	var warnings []string
+	if len(idSet) > 0 && len(found) < len(idSet) {
+		missing := make([]string, 0, len(idSet)-len(found))
+		for _, id := range ids {
+			if !found[id] {
+				missing = append(missing, id)
+			}
+		}
+		warnings = append(warnings, fmt.Sprintf(
+			"%d of %d requested findings were not found: %s",
+			len(missing), len(idSet), strings.Join(missing, ", "),
+		))
+	}
+	if truncated {
+		warnings = append(warnings, fmt.Sprintf(
+			"stopped after %d pages of %d; more findings exist",
+			exportMaxPages, exportPageSize,
+		))
+	}
+	warning := strings.Join(warnings, "; ")
 
 	switch format {
 	case "json":
 		b, err := json.MarshalIndent(findings, "", "  ")
 		if err != nil {
-			return "", err
+			return "", warning, err
 		}
-		return string(b), nil
+		return string(b), warning, nil
 
 	case "markdown":
 		var sb strings.Builder
@@ -236,7 +300,7 @@ func exportFindingsFormatted(
 			}
 			sb.WriteString("\n---\n\n")
 		}
-		return sb.String(), nil
+		return sb.String(), warning, nil
 
 	case "csv":
 		var sb strings.Builder
@@ -252,10 +316,10 @@ func exportFindingsFormatted(
 				f.Reporter, f.CreatedAt, f.RequestID, desc,
 			))
 		}
-		return sb.String(), nil
+		return sb.String(), warning, nil
 	}
 
-	return "", fmt.Errorf("unsupported format: %s", format)
+	return "", "", fmt.Errorf("unsupported format: %s", format)
 }
 
 // RegisterExportFindingsTool registers the tool

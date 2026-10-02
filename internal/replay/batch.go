@@ -32,9 +32,16 @@ type BatchResult struct {
 	Error       string                  `json:"error,omitempty"`
 }
 
+// batchPollTimeout is how long one batched request waits for its answer.
+const batchPollTimeout = 15 * time.Second
+
 // RunBatch sends N requests in parallel through Caido's Replay API.
 // It creates a session pool, dispatches each request to its own
 // session, polls for results, and returns them in order.
+//
+// Acquire is governed by ctx, not by a timeout of its own: a batch of 20 slow
+// requests at concurrency 2 legitimately waits a long time for a session, and
+// the caller's deadline is the only thing that knows how long is too long.
 func RunBatch(
 	ctx context.Context,
 	client *caido.Client,
@@ -106,7 +113,28 @@ func executeSingle(
 		result.Error = fmt.Sprintf("acquire session: %v", err)
 		return result
 	}
-	defer pool.Release(sessionID)
+
+	// A session is only returned to the pool once this request is PROVABLY
+	// finished with it. Anything else retires it.
+	//
+	// The old code released unconditionally, and that is a wrong-answer bug,
+	// not a leak: with 10 requests at concurrency 5, request A exhausts its
+	// poll window while its task is still running, releases the session, B
+	// acquires the same session, drafts into it, StartTask answers
+	// TaskInProgress (which the batch discarded), B never reaches the wire —
+	// and then A's entry becomes active and A's 200 is written onto B's row.
+	// In a scan that reads "the cross-site probe got 200". Retiring replaces
+	// the session so the pool keeps its width; if the replacement cannot be
+	// created the pool shrinks, which makes later requests fail to acquire
+	// instead of inheriting a busy session.
+	retire := true
+	defer func() {
+		if retire {
+			pool.Retire(ctx, sessionID)
+			return
+		}
+		pool.Release(sessionID)
+	}()
 
 	// Normalize raw request.
 	raw := httputil.NormalizeCRLF(br.Raw)
@@ -118,6 +146,7 @@ func executeSingle(
 	}
 	if host == "" {
 		result.Error = "host required (provide in input or Host header)"
+		retire = false
 		return result
 	}
 
@@ -146,26 +175,26 @@ func executeSingle(
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
 	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
 
-	// Send request. Pooled sessions are reused across a batch, so the state
-	// returned here is what keeps the poller from reporting the previous
-	// request's response as this one's.
-	_, sendState, err := SendRaw(
-		ctx, client, sessionID, conn, rawB64, true, false,
-	)
+	// The pooled session is named explicitly, so Send never rotates away from
+	// it: a batch row must report the session it was dispatched to.
+	outcome, err := Send(ctx, client, SendOptions{
+		SessionID:           sessionID,
+		Conn:                conn,
+		RawBase64:           rawB64,
+		UpdateContentLength: true,
+		PollTimeout:         batchPollTimeout,
+	})
 	if err != nil {
 		result.Error = fmt.Sprintf("send: %v", err)
 		return result
 	}
-
-	// Poll for response with a per-request timeout.
-	pollCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	entry, err := PollForEntry(pollCtx, client, sendState)
-	if err != nil {
-		result.Error = fmt.Sprintf("poll: %v", err)
+	if outcome.PollErr != nil {
+		result.Error = fmt.Sprintf("poll: %v", outcome.PollErr)
 		return result
 	}
+
+	entry := outcome.Entry
+	retire = false
 
 	if entry.Error != nil && *entry.Error != "" {
 		result.Error = *entry.Error

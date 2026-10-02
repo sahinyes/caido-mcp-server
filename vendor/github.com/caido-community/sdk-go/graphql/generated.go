@@ -1522,7 +1522,13 @@ func (v *CreateReplaySessionCollectionResponse) GetCreateReplaySessionCollection
 
 // CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload includes the requested fields of the GraphQL type CreateReplaySessionPayload.
 type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload struct {
-	Session *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession `json:"-"`
+	Error   *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError `json:"-"`
+	Session *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession          `json:"-"`
+}
+
+// GetError returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Error, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) GetError() *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError {
+	return v.Error
 }
 
 // GetSession returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Session, and is useful for accessing the field via an interface.
@@ -1538,6 +1544,7 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) Unmar
 
 	var firstPass struct {
 		*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload
+		Error   json.RawMessage `json:"error"`
 		Session json.RawMessage `json:"session"`
 		graphql.NoUnmarshalJSON
 	}
@@ -1546,6 +1553,20 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) Unmar
 	err := json.Unmarshal(b, &firstPass)
 	if err != nil {
 		return err
+	}
+
+	{
+		dst := &v.Error
+		src := firstPass.Error
+		if len(src) != 0 && string(src) != "null" {
+			*dst = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError)
+			err = __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError(
+				src, *dst)
+			if err != nil {
+				return fmt.Errorf(
+					"unable to unmarshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Error: %w", err)
+			}
+		}
 	}
 
 	{
@@ -1565,6 +1586,8 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) Unmar
 }
 
 type __premarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayload struct {
+	Error json.RawMessage `json:"error"`
+
 	Session json.RawMessage `json:"session"`
 }
 
@@ -1581,6 +1604,20 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) __pre
 
 	{
 
+		dst := &retval.Error
+		src := v.Error
+		if src != nil {
+			var err error
+			*dst, err = __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError(
+				src)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"unable to marshal CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload.Error: %w", err)
+			}
+		}
+	}
+	{
+
 		dst := &retval.Session
 		src := v.Session
 		if src != nil {
@@ -1594,6 +1631,129 @@ func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayload) __pre
 		}
 	}
 	return &retval, nil
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError includes the requested fields of the GraphQL type CloudUserError.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError) GetTypename() *string {
+	return v.Typename
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError includes the requested fields of the GraphQL interface CreateReplaySessionError.
+//
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError is implemented by the following types:
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError interface {
+	implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError()
+	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
+	GetTypename() *string
+}
+
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError() {
+}
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError() {
+}
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError) implementsGraphQLInterfaceCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError() {
+}
+
+func __unmarshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError(b []byte, v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var tn struct {
+		TypeName string `json:"__typename"`
+	}
+	err := json.Unmarshal(b, &tn)
+	if err != nil {
+		return err
+	}
+
+	switch tn.TypeName {
+	case "CloudUserError":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError)
+		return json.Unmarshal(b, *v)
+	case "OtherUserError":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError)
+		return json.Unmarshal(b, *v)
+	case "PermissionDeniedUserError":
+		*v = new(CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError)
+		return json.Unmarshal(b, *v)
+	case "":
+		return fmt.Errorf(
+			"response was missing CreateReplaySessionError.__typename")
+	default:
+		return fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError: "%v"`, tn.TypeName)
+	}
+}
+
+func __marshalCreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError(v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError) ([]byte, error) {
+
+	var typename string
+	switch v := (*v).(type) {
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError:
+		typename = "CloudUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCloudUserError
+		}{typename, v}
+		return json.Marshal(result)
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError:
+		typename = "OtherUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError
+		}{typename, v}
+		return json.Marshal(result)
+	case *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError:
+		typename = "PermissionDeniedUserError"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError
+		}{typename, v}
+		return json.Marshal(result)
+	case nil:
+		return []byte("null"), nil
+	default:
+		return nil, fmt.Errorf(
+			`unexpected concrete type for CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorCreateReplaySessionError: "%T"`, v)
+	}
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError includes the requested fields of the GraphQL type OtherUserError.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError struct {
+	Typename *string `json:"__typename"`
+	Code     string  `json:"code"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError) GetTypename() *string {
+	return v.Typename
+}
+
+// GetCode returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError.Code, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorOtherUserError) GetCode() string {
+	return v.Code
+}
+
+// CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError includes the requested fields of the GraphQL type PermissionDeniedUserError.
+type CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError.Typename, and is useful for accessing the field via an interface.
+func (v *CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadErrorPermissionDeniedUserError) GetTypename() *string {
+	return v.Typename
 }
 
 // CreateReplaySessionCreateReplaySessionCreateReplaySessionPayloadSessionReplaySession includes the requested fields of the GraphQL interface ReplaySession.
@@ -24017,6 +24177,12 @@ func CreateProject(
 const CreateReplaySession_Operation = `
 mutation CreateReplaySession ($input: CreateReplaySessionInput!) {
 	createReplaySession(input: $input) {
+		error {
+			__typename
+			... on OtherUserError {
+				code
+			}
+		}
 		session {
 			__typename
 			id

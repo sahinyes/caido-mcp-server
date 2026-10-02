@@ -10,7 +10,6 @@ import (
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -36,17 +35,6 @@ type SendRequestOutput struct {
 	Request    *httputil.ParsedMessage `json:"request,omitempty"`
 	Response   *httputil.ParsedMessage `json:"response,omitempty"`
 	Error      string                  `json:"error,omitempty"`
-}
-
-// isTaskInProgress checks whether the error from
-// StartReplayTask is a TaskInProgressUserError.
-func isTaskInProgress(
-	resp *gen.StartReplayTaskResponse,
-) bool {
-	if resp == nil {
-		return false
-	}
-	return replay.IsTaskInProgress(resp)
 }
 
 // sendRequestHandler creates the handler function
@@ -106,13 +94,6 @@ func sendRequestHandler(
 			}
 		}
 
-		sessionID, err := replay.GetOrCreateSession(
-			ctx, client, input.SessionID,
-		)
-		if err != nil {
-			return nil, SendRequestOutput{}, err
-		}
-
 		rawBase64 := base64.StdEncoding.EncodeToString([]byte(raw))
 		conn := caido.ReplayConnection{
 			Host:  host,
@@ -120,46 +101,37 @@ func sendRequestHandler(
 			IsTLS: useTLS,
 		}
 
-		taskResp, sendState, err := replay.SendRaw(
-			ctx, client, sessionID, conn, rawBase64, true, false,
-		)
-		if err != nil || isTaskInProgress(taskResp) {
-			// Session busy or error - create a new session and retry.
-			newSessionID, _, createErr := replay.NewSession(ctx, client)
-			if createErr != nil {
-				return nil, SendRequestOutput{}, fmt.Errorf(
-					"failed to create fallback session: %w",
-					createErr,
-				)
-			}
-			sessionID = newSessionID
-
-			if input.SessionID == "" {
-				replay.ResetDefaultSession(sessionID)
-			}
-
-			_, sendState, err = replay.SendRaw(
-				ctx, client, sessionID, conn, rawBase64, true, false,
-			)
-			if err != nil {
-				return nil, SendRequestOutput{}, fmt.Errorf(
-					"failed to send request (retry): %w", err,
-				)
-			}
+		// One call does the whole sequence: resolve the session, serialise
+		// everything that touches it, draft, start, wait. Doing those steps
+		// here by hand is what let two concurrent tool calls trade drafts.
+		outcome, err := replay.Send(ctx, client, replay.SendOptions{
+			SessionID:           input.SessionID,
+			Conn:                conn,
+			RawBase64:           rawBase64,
+			UpdateContentLength: true,
+		})
+		if err != nil {
+			return nil, SendRequestOutput{}, err
 		}
 
-		output := SendRequestOutput{SessionID: sessionID}
+		output := SendRequestOutput{SessionID: outcome.SessionID}
 
-		entry, pollErr := replay.PollForEntry(ctx, client, sendState)
-		if pollErr != nil {
+		if outcome.PollErr != nil {
+			// Deliberately NO entryId. The session's current active entry is
+			// not necessarily this send's: if the task never started it still
+			// holds the PREVIOUS request and its response, and this tool's
+			// own description used to tell the caller to go fetch it. The
+			// session id is the honest handle.
 			output.Error = fmt.Sprintf(
-				"poll failed: %v (use get_replay_entry to retry)",
-				pollErr,
+				"no response yet: %v (the task may still be running on "+
+					"replay session %s - re-read that session's active "+
+					"entry with get_replay_entry)",
+				outcome.PollErr, outcome.SessionID,
 			)
-			output.EntryID = replay.ActiveEntryID(ctx, client, sessionID)
 			return nil, output, nil
 		}
 
+		entry := outcome.Entry
 		output.EntryID = entry.ID
 
 		if entry.Error != nil && *entry.Error != "" {
@@ -199,6 +171,6 @@ func RegisterSendRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_send_request",
-		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns entryId for follow-up via get_replay_entry. Redirects are NOT followed (returns 3xx directly). TLS verification is enforced by the Caido replay engine. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
+		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to ~9s for response. On timeout, returns sessionId and NO entryId (the session's active entry may still be the previous send's) - re-read that session to collect the answer. Redirects are NOT followed (returns 3xx directly). TLS verification is enforced by the Caido replay engine. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
 	}, sendRequestHandler(client))
 }

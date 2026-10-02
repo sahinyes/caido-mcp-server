@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
@@ -20,53 +19,31 @@ func sendReplay(
 	port int, useTLS bool,
 	bodyLimit int, allHeaders bool,
 ) (string, error) {
-	sessionID, err := replay.GetOrCreateSession(ctx, client, "")
-	if err != nil {
-		return "", err
-	}
-
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
 	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
 
-	taskResp, sendState, err := replay.SendRaw(
-		ctx, client, sessionID, conn, rawB64, true, false,
-	)
-	hasError := taskResp != nil &&
-		taskResp.StartReplayTask.GetError() != nil
-	if err != nil || hasError {
-		isTaskBusy := false
-		if err != nil {
-			isTaskBusy = strings.Contains(
-				err.Error(), "TaskInProgressUserError",
-			)
-		} else {
-			isTaskBusy = true
-		}
-
-		if isTaskBusy {
-			newSessionID, _, createErr := replay.NewSession(ctx, client)
-			if createErr != nil {
-				return "", fmt.Errorf(
-					"fallback session: %w", createErr,
-				)
-			}
-			sessionID = newSessionID
-			replay.ResetDefaultSession(sessionID)
-			_, sendState, err = replay.SendRaw(
-				ctx, client, sessionID, conn, rawB64, true, false,
-			)
-			if err != nil {
-				return "", fmt.Errorf("send retry: %w", err)
-			}
-		} else if err != nil {
-			return "", fmt.Errorf("send: %w", err)
-		}
-	}
-
-	entry, err := replay.PollForEntry(ctx, client, sendState)
+	// The busy/not-busy classification this used to do by hand was inverted in
+	// both directions: ANY payload error counted as "session busy" and was
+	// retried on a fresh session (so a permission refusal looked like
+	// contention), while a transport error could never be busy because it
+	// matched on the string "TaskInProgressUserError", which a Go error from
+	// StartTask never contains - the refusal arrives in the PAYLOAD. replay.Send
+	// classifies it from the payload's own type.
+	outcome, err := replay.Send(ctx, client, replay.SendOptions{
+		Conn:                conn,
+		RawBase64:           rawB64,
+		UpdateContentLength: true,
+	})
 	if err != nil {
 		return "", err
 	}
+	if outcome.PollErr != nil {
+		return "", fmt.Errorf(
+			"no response yet: %w (session %s)",
+			outcome.PollErr, outcome.SessionID,
+		)
+	}
+	entry := outcome.Entry
 
 	if entry.Request == nil || entry.Request.Response == nil {
 		return "", fmt.Errorf("no response received")

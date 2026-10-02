@@ -79,18 +79,20 @@ func replayRequestHandler(
 			)
 		}
 
-		// Apply modifications
-		modifiedRaw := applyModifications(parsed, input)
-
-		// Get or create replay session
-		sessionID, err := replay.GetOrCreateSession(
-			ctx, client, input.SessionID,
-		)
-		if err != nil {
-			return nil, ReplayRequestOutput{}, err
+		// Resend the CAPTURED BYTES unless the caller asked for a change.
+		//
+		// Rebuilding from the parse is lossy in ways that matter to what is
+		// being tested: header order and spacing are normalised, every line
+		// the parser did not model as a header is dropped, and the body is
+		// re-emitted from the parsed copy. For a plain replay of request N
+		// that is a different request than N. host/port/tls are NOT rewrites
+		// here - they change the TCP target, not the bytes.
+		rawBase64 := orig.Raw
+		if wantsRewrite(input) {
+			rawBase64 = base64.StdEncoding.EncodeToString(
+				[]byte(applyModifications(parsed, input)),
+			)
 		}
-
-		rawBase64 := base64.StdEncoding.EncodeToString([]byte(modifiedRaw))
 
 		host := orig.Host
 		if input.Host != "" {
@@ -111,41 +113,35 @@ func replayRequestHandler(
 			IsTLS: useTLS,
 		}
 
-		taskResp, sendState, err := replay.SendRaw(
-			ctx, client, sessionID, conn, rawBase64, true, false,
-		)
-		if err != nil || isTaskInProgress(taskResp) {
-			newSessionID, _, createErr := replay.NewSession(ctx, client)
-			if createErr != nil {
-				return nil, ReplayRequestOutput{}, fmt.Errorf(
-					"failed to create fallback session: %w", createErr,
-				)
-			}
-			sessionID = newSessionID
-			if input.SessionID == "" {
-				replay.ResetDefaultSession(sessionID)
-			}
-			_, sendState, err = replay.SendRaw(
-				ctx, client, sessionID, conn, rawBase64, true, false,
-			)
-			if err != nil {
-				return nil, ReplayRequestOutput{}, fmt.Errorf(
-					"failed to replay request (retry): %w", err,
-				)
-			}
+		// One call does the whole sequence under this session's lock; see
+		// replay.Send. A caller-supplied sessionId is never swapped for
+		// another session behind the caller's back.
+		outcome, err := replay.Send(ctx, client, replay.SendOptions{
+			SessionID:           input.SessionID,
+			Conn:                conn,
+			RawBase64:           rawBase64,
+			UpdateContentLength: true,
+		})
+		if err != nil {
+			return nil, ReplayRequestOutput{}, err
 		}
 
-		output := ReplayRequestOutput{SessionID: sessionID}
+		output := ReplayRequestOutput{SessionID: outcome.SessionID}
 
-		entry, pollErr := replay.PollForEntry(ctx, client, sendState)
-		if pollErr != nil {
+		if outcome.PollErr != nil {
+			// No entryId on purpose: the session's active entry may still be
+			// the PREVIOUS send's request and response. See
+			// replay.SendOutcome.EntryID.
 			output.Error = fmt.Sprintf(
-				"poll failed: %v (use get_replay_entry to retry)", pollErr,
+				"no response yet: %v (the task may still be running on "+
+					"replay session %s - re-read that session's active "+
+					"entry with get_replay_entry)",
+				outcome.PollErr, outcome.SessionID,
 			)
-			output.EntryID = replay.ActiveEntryID(ctx, client, sessionID)
 			return nil, output, nil
 		}
 
+		entry := outcome.Entry
 		output.EntryID = entry.ID
 
 		if entry.Error != nil && *entry.Error != "" {
@@ -166,7 +162,7 @@ func replayRequestHandler(
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
 				output.ElapsedMs = resp.RoundtripTime
-			output.RoundtripMs = resp.RoundtripTime
+				output.RoundtripMs = resp.RoundtripTime
 				output.Response = httputil.ParseBase64(
 					resp.Raw, true, true, input.BodyOffset, bodyLimit,
 				)
@@ -175,6 +171,17 @@ func replayRequestHandler(
 
 		return nil, output, nil
 	}
+}
+
+// wantsRewrite reports whether the caller asked for anything that changes the
+// request BYTES. Connection overrides (host/port/tls) are not in the list:
+// they retarget the same bytes.
+func wantsRewrite(input ReplayRequestInput) bool {
+	return input.Method != "" ||
+		input.Path != "" ||
+		input.Body != nil ||
+		len(input.SetHeaders) > 0 ||
+		len(input.RemoveHeaders) > 0
 }
 
 // applyModifications rebuilds the raw HTTP request with the given modifications
@@ -233,6 +240,13 @@ func applyModifications(parsed *httputil.ParsedMessage, input ReplayRequestInput
 			continue
 		}
 		if val, ok := overrideVal[lower]; ok {
+			// setHeaders is documented as "add or replace", so a header the
+			// original carries TWICE must come out once. Without this the
+			// override was written once per original occurrence - two Cookie
+			// lines in, two identical Cookie lines out.
+			if written[lower] {
+				continue
+			}
 			b.WriteString(overrideMap[lower])
 			b.WriteString(": ")
 			b.WriteString(val)
@@ -274,6 +288,6 @@ func RegisterReplayRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_replay_request",
-		Description: `Clone a captured request by ID and resend with modifications. Fetches the original request fresh on every call. Supports host/port/tls override (changes TCP target, not just Host header), setHeaders (add/replace), removeHeaders, body (replace), method, path. sessionId controls the replay session pool — original request is always re-fetched from Caido. Returns response inline.`,
+		Description: `Clone a captured request by ID and resend with modifications. Fetches the original request fresh on every call. Supports host/port/tls override (changes TCP target, not just Host header), setHeaders (add/replace), removeHeaders, body (replace), method, path. sessionId controls the replay session pool - original request is always re-fetched from Caido, and a sessionId you pass is never swapped for another session. With no setHeaders/removeHeaders/body/method/path the captured bytes are resent EXACTLY as captured; any of those overrides rebuilds the request, which normalises header order and spacing. Returns response inline.`,
 	}, replayRequestHandler(client))
 }

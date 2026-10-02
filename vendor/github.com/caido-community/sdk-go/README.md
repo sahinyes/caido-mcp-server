@@ -2,6 +2,29 @@
 
 Community Go SDK for [Caido](https://caido.io) - the lightweight web security auditing toolkit.
 
+> **This checkout is a FORK and carries local changes that upstream does not
+> have.** It is vendored into `caido-mcp-server`; its own origin
+> (`szybnev/sdk-go`) answers "Repository not found", so the vendored copy is the
+> only published artifact and a rebase onto upstream silently drops the list
+> below. Both items are defects that upstream shares.
+>
+> 1. **`retry_transport.go` (new file).** Retries connection-level failures once
+>    so the client self-heals after macOS sleep/wake instead of returning a
+>    stale-connection error (FR fr-1777836025988). Since 2026-10-01 it does
+>    **not** retry a GraphQL **mutation** once the bytes may have been
+>    delivered - replaying `startReplayTask` or `deleteFindings` duplicates a
+>    side effect, and "reset while reading the reply" is indistinguishable from
+>    "delivered and executed". Dial failures keep their retry, because nothing
+>    was sent, and that is also the case the retry exists for.
+> 2. **`createReplaySession` now selects its payload `error`**
+>    (`graphql/operations/replay.graphql`, regenerated into
+>    `graphql/generated.go`, surfaced by `createSessionPayloadError` in
+>    `replay.go`). The payload's error is optional, so every refusal -
+>    permission denied, a cloud restriction, an unknown collection id - used to
+>    arrive as `err == nil` with a nil session and came back as
+>    "create replay session returned no session", which reads as an SDK bug
+>    rather than an answer from Caido.
+
 This SDK mirrors the API surface of the official [JavaScript SDK](https://github.com/caido/sdk-js) (`@caido/sdk-client`) and uses [genqlient](https://github.com/Khan/genqlient) for type-safe GraphQL code generation from the official Caido schema.
 
 ## Installation

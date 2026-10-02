@@ -62,7 +62,12 @@ func sendRequestHandler(
 		// Determine host
 		host := input.Host
 		if host == "" {
-			host = httputil.ParseHostHeader(input.Raw)
+			// Parsed from the NORMALISED copy: NormalizeCRLF exists partly to
+			// repair input that carries the literal two-character escapes
+			// \r\n, and that form has no line breaks at all - so reading the
+			// Host header out of the raw input rejects exactly the requests the
+			// normaliser was added for.
+			host = httputil.ParseHostHeader(raw)
 		}
 		if host == "" {
 			return nil, SendRequestOutput{}, fmt.Errorf(
@@ -109,6 +114,7 @@ func sendRequestHandler(
 			Conn:                conn,
 			RawBase64:           rawBase64,
 			UpdateContentLength: true,
+			PollTimeout:         replay.DefaultSendPollTimeout,
 		})
 		if err != nil {
 			return nil, SendRequestOutput{}, err
@@ -124,8 +130,9 @@ func sendRequestHandler(
 			// session id is the honest handle.
 			output.Error = fmt.Sprintf(
 				"no response yet: %v (the task may still be running on "+
-					"replay session %s - re-read that session's active "+
-					"entry with get_replay_entry)",
+					"replay session %s - call list_replay_sessions to read "+
+					"that session's activeEntryId, then get_replay_entry on "+
+					"it)",
 				outcome.PollErr, outcome.SessionID,
 			)
 			return nil, output, nil
@@ -171,6 +178,6 @@ func RegisterSendRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_send_request",
-		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to ~9s for response. On timeout, returns sessionId and NO entryId (the session's active entry may still be the previous send's) - re-read that session to collect the answer. Redirects are NOT followed (returns 3xx directly). TLS verification is enforced by the Caido replay engine. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
+		Description: `Send HTTP request and return response inline. Returns statusCode, headers, body. Polls up to 10s for response. On timeout, returns sessionId and NO entryId (the session's active entry may still be the previous send's) - re-read that session to collect the answer. Redirects are NOT followed (returns 3xx directly). TLS verification is enforced by the Caido replay engine. Use noRequestEcho=true when chunking large responses to reduce token usage.`,
 	}, sendRequestHandler(client))
 }

@@ -71,8 +71,21 @@ func replayRequestHandler(
 
 		orig := origResp.Request
 
-		// Parse raw request
-		parsed := httputil.ParseBase64(orig.Raw, true, true, 0, 0)
+		// Parse a CRLF-NORMALISED copy. The header/body split keys off
+		// \r\n\r\n, so a captured request stored with bare LF line endings
+		// parses as one enormous header block with an empty body - and the
+		// rebuild path would then send a request with its body silently
+		// dropped. The bytes that go on the wire on the verbatim path are still
+		// orig.Raw, untouched.
+		decoded, derr := base64.StdEncoding.DecodeString(orig.Raw)
+		if derr != nil {
+			return nil, ReplayRequestOutput{}, fmt.Errorf(
+				"request %s is not valid base64: %w", input.ID, derr,
+			)
+		}
+		parsed := httputil.ParseRaw(
+			[]byte(httputil.NormalizeCRLF(string(decoded))), true, true, 0, 0,
+		)
 		if parsed == nil {
 			return nil, ReplayRequestOutput{}, fmt.Errorf(
 				"failed to parse request %s", input.ID,
@@ -121,6 +134,7 @@ func replayRequestHandler(
 			Conn:                conn,
 			RawBase64:           rawBase64,
 			UpdateContentLength: true,
+			PollTimeout:         replay.DefaultSendPollTimeout,
 		})
 		if err != nil {
 			return nil, ReplayRequestOutput{}, err
@@ -134,8 +148,9 @@ func replayRequestHandler(
 			// replay.SendOutcome.EntryID.
 			output.Error = fmt.Sprintf(
 				"no response yet: %v (the task may still be running on "+
-					"replay session %s - re-read that session's active "+
-					"entry with get_replay_entry)",
+					"replay session %s - call list_replay_sessions to read "+
+					"that session's activeEntryId, then get_replay_entry on "+
+					"it)",
 				outcome.PollErr, outcome.SessionID,
 			)
 			return nil, output, nil
@@ -288,6 +303,6 @@ func RegisterReplayRequestTool(
 ) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "caido_replay_request",
-		Description: `Clone a captured request by ID and resend with modifications. Fetches the original request fresh on every call. Supports host/port/tls override (changes TCP target, not just Host header), setHeaders (add/replace), removeHeaders, body (replace), method, path. sessionId controls the replay session pool - original request is always re-fetched from Caido, and a sessionId you pass is never swapped for another session. With no setHeaders/removeHeaders/body/method/path the captured bytes are resent EXACTLY as captured; any of those overrides rebuilds the request, which normalises header order and spacing. Returns response inline.`,
+		Description: `Clone a captured request by ID and resend with modifications. Fetches the original request fresh on every call. Supports host/port/tls override (changes TCP target, not just Host header), setHeaders (add/replace), removeHeaders, body (replace), method, path. sessionId controls the replay session pool - original request is always re-fetched from Caido, and a sessionId you pass is never swapped for another session. With no setHeaders/removeHeaders/body/method/path the captured bytes are resent byte-for-byte except that Caido recomputes Content-Length (the session setting this server enforces); any of those overrides rebuilds the request, which also normalises header order and spacing. Returns response inline.`,
 	}, replayRequestHandler(client))
 }

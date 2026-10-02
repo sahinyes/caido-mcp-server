@@ -29,6 +29,21 @@ const (
 
 	// lateReadTimeout bounds the one last read done after a poll gives up.
 	lateReadTimeout = 2 * time.Second
+
+	// sendOverallTimeout bounds a whole send when the caller brought no
+	// deadline.
+	//
+	// It is not a nicety. Everything in Send runs while holding the session's
+	// lock, and the SDK's http.Client has NO Timeout of its own, so a Caido that
+	// accepts a connection and never answers would hold that lock forever - and
+	// an MCP tool call frequently arrives with no deadline at all. A bounded
+	// holder is also what makes waiting for the lock bounded.
+	sendOverallTimeout = 60 * time.Second
+
+	// DefaultSendPollTimeout is how long a single tool call waits for its
+	// answer. It used to be implicit in PollMaxRetries; it is explicit now,
+	// because the retry count is a FALLBACK cap and not a deadline.
+	DefaultSendPollTimeout = 10 * time.Second
 )
 
 // HTTPKind is the only replay session kind this server creates.
@@ -48,11 +63,18 @@ var (
 	)
 	// ErrStartTaskRefused is any other startReplayTask payload refusal.
 	ErrStartTaskRefused = errors.New("caido refused to start the replay task")
+	// ErrSendAmbiguous marks a startReplayTask that failed at the TRANSPORT
+	// level: the mutation may already have been delivered and executed, so the
+	// request may already be on the wire. Nothing may resend it.
+	ErrSendAmbiguous = errors.New(
+		"startReplayTask failed in flight; the request may already have been sent",
+	)
 )
 
 var (
-	defaultSessionID string
-	sessionMu        sync.Mutex
+	defaultSessionID      string
+	defaultSessionProject string
+	sessionMu             sync.Mutex
 )
 
 // A replay session cannot be created empty and then filled: Caido has no
@@ -114,16 +136,31 @@ func NewSession(
 }
 
 // GetOrCreateSession returns the caller's session id, or lazily creates and
-// caches a shared one.
+// caches a shared one FOR THE PROJECT THAT IS OPEN NOW.
+//
+// The open project is part of the cache key, and that is the whole point. Caido
+// numbers replay sessions PER PROJECT, and which project is open is global
+// instance state shared with the operator's browser and every other client - so
+// a cached bare id survives a project switch and then names a DIFFERENT, live
+// session in the new project. The next default send would draft over it: the
+// operator's request replaced by ours, no error anywhere. That is the same
+// confusion that destroyed nine of the operator's replay sessions on
+// 2026-10-01, one layer down.
+//
+// A project that cannot be read counts as a mismatch. Litter (one unused
+// session) is a cheaper mistake than writing into the wrong project.
 func GetOrCreateSession(
 	ctx context.Context, client *caido.Client, inputID string,
 ) (string, error) {
 	if inputID != "" {
 		return inputID, nil
 	}
+	project := currentProjectID(ctx, client)
+
 	sessionMu.Lock()
 	defer sessionMu.Unlock()
-	if defaultSessionID != "" {
+	if defaultSessionID != "" && project != "" &&
+		project == defaultSessionProject {
 		return defaultSessionID, nil
 	}
 	id, _, err := NewSession(ctx, client)
@@ -131,13 +168,32 @@ func GetOrCreateSession(
 		return "", fmt.Errorf("create replay session: %w", err)
 	}
 	defaultSessionID = id
+	defaultSessionProject = project
 	return defaultSessionID, nil
 }
 
+// currentProjectID returns the open project's id, or "" if it cannot be read.
+func currentProjectID(ctx context.Context, client *caido.Client) string {
+	resp, err := client.Projects.GetCurrent(ctx)
+	if err != nil || resp == nil || resp.CurrentProject == nil {
+		return ""
+	}
+	return resp.CurrentProject.Project.Id
+}
+
+// ResetDefaultSession replaces the cached shared session, keeping the project
+// it belongs to: a rotation happens inside the project that was just verified.
 func ResetDefaultSession(newID string) {
 	sessionMu.Lock()
 	defaultSessionID = newID
 	sessionMu.Unlock()
+}
+
+// sharedSessionIs reports whether id is still the cached shared session.
+func sharedSessionIs(id string) bool {
+	sessionMu.Lock()
+	defer sessionMu.Unlock()
+	return defaultSessionID == id
 }
 
 // Per-session serialisation.
@@ -227,6 +283,18 @@ func taskPayloadError(resp *gen.StartReplayTaskResponse) error {
 	}
 	errPtr := resp.StartReplayTask.GetError()
 	if errPtr == nil || *errPtr == nil {
+		// Both halves of the payload are nullable in the schema, and the
+		// operation selects `task { id }`, so a started task always comes back
+		// with one. No task and no error means the task did NOT start - reading
+		// that as success buys an 8.75 s wait on a session where nothing is
+		// running, and then a message telling the caller the task may still be
+		// running. start_automate.go guards the same shape for Automate.
+		if resp.StartReplayTask.Task == nil {
+			return fmt.Errorf(
+				"%w: payload carried neither a task nor an error",
+				ErrStartTaskRefused,
+			)
+		}
 		return nil
 	}
 	v := *errPtr
@@ -265,6 +333,17 @@ type SendState struct {
 	EntryID        string // the entry the draft was written to
 	PrevResponseID string // response already on that entry, if any
 	PrevError      string // error already on that entry, if any
+
+	// preEntries is the set of entry ids the session had BEFORE the send, as
+	// far as it could be read. A moved active entry only proves this send's
+	// answer if it moved to an entry that did not exist yet: another writer
+	// this process cannot lock - the operator's Caido UI, a second MCP client,
+	// the CLI - can select an EXISTING entry and move the pointer without
+	// sending anything, and "it moved" alone would then hand this caller
+	// someone else's request and response. Caido returns the first 100 entries,
+	// so on a very long session this degrades back to the positional rule
+	// rather than becoming wrong.
+	preEntries map[string]bool
 
 	// strict is set when the pre-send baseline could NOT be read. With no
 	// baseline, "its response is not the one we saw before" degenerates into
@@ -320,13 +399,37 @@ func Send(
 ) (SendOutcome, error) {
 	explicit := opts.SessionID != ""
 
-	sessionID, err := GetOrCreateSession(ctx, client, opts.SessionID)
-	if err != nil {
-		return SendOutcome{}, err
+	// See sendOverallTimeout: a lock holder must be bounded, and an MCP tool
+	// call often arrives with no deadline at all.
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, sendOverallTimeout)
+		defer cancel()
+	}
+
+	// Resolve, lock, then CHECK THE RESOLUTION STILL HOLDS. While a waiter is
+	// queued on the shared session's lock, the holder may have rotated it away
+	// precisely because it was unusable - so the id captured before the wait can
+	// be the one already proven dead, and every waiter would repeat the same
+	// failure and leave one orphaned session behind. One re-resolve is enough:
+	// the second attempt is taken on whatever the holder installed.
+	var (
+		sessionID string
+		unlock    func()
+	)
+	for attempt := 0; ; attempt++ {
+		var err error
+		sessionID, err = GetOrCreateSession(ctx, client, opts.SessionID)
+		if err != nil {
+			return SendOutcome{}, err
+		}
+		unlock = lockSession(sessionID)
+		if explicit || attempt > 0 || sharedSessionIs(sessionID) {
+			break
+		}
+		unlock()
 	}
 	out := SendOutcome{SessionID: sessionID}
-
-	unlock := lockSession(sessionID)
 	defer func() { unlock() }()
 
 	resp, st, err := sendRaw(ctx, client, sessionID, opts)
@@ -338,6 +441,16 @@ func Send(
 		// of passing sessionId is that the request goes to that session, and
 		// "sent somewhere else, reported as success" is worse than a failure.
 		if explicit {
+			return out, err
+		}
+		// Nor is a send retried when it is not known whether it already
+		// happened. startReplayTask is a mutation; if its REPLY was lost, Caido
+		// may have started the task and the request may be on the wire. Sending
+		// it again on a fresh session would put it there twice - the exact
+		// duplicate the vendored retryTransport refuses to create one layer
+		// down, re-created one layer up. Every other sendRaw failure happens
+		// before startReplayTask, so rotating on those is safe.
+		if errors.Is(err, ErrSendAmbiguous) {
 			return out, err
 		}
 		// The shared session is unusable for this send: busy, deleted under
@@ -386,16 +499,23 @@ func Send(
 	// moved the active entry meanwhile. Anything that satisfies the send's own
 	// guard IS this send's answer and merely arrived a tick late; anything else
 	// is not reported as an entry at all.
-	lateCtx, cancel := context.WithTimeout(
-		context.WithoutCancel(ctx), lateReadTimeout,
-	)
-	defer cancel()
-	if e, activeID, rerr := readActive(
-		lateCtx, client, sessionID,
-	); rerr == nil && answered(e, st, activeID) {
-		out.Entry = e
-		out.EntryID = e.ID
-		return out, nil
+	//
+	// Skipped when the CALLER cancelled: a caller that went away does not want
+	// two more seconds of work done in its name. A caller whose deadline simply
+	// ran out is exactly who this read is for, which is why it runs on a
+	// detached context.
+	if !errors.Is(ctx.Err(), context.Canceled) {
+		lateCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx), lateReadTimeout,
+		)
+		defer cancel()
+		if e, activeID, rerr := readActive(
+			lateCtx, client, sessionID,
+		); rerr == nil && answered(e, st, activeID) {
+			out.Entry = e
+			out.EntryID = e.ID
+			return out, nil
+		}
 	}
 
 	out.PollErr = pollErr
@@ -422,6 +542,12 @@ func sendRaw(
 		)
 	}
 	st.EntryID = sess.ActiveEntryID
+	if len(sess.Entries) > 0 {
+		st.preEntries = make(map[string]bool, len(sess.Entries))
+		for _, e := range sess.Entries {
+			st.preEntries[e.ID] = true
+		}
+	}
 
 	// The baseline is best effort for SENDING — a session that cannot be read
 	// back still sends — but not for INTERPRETING the answer: see
@@ -462,7 +588,13 @@ func sendRaw(
 	}
 
 	resp, err := client.Replay.StartTask(ctx, sessionID)
-	return resp, st, err
+	if err != nil {
+		// Marked, not wrapped away: the caller has to be able to tell this
+		// failure (outcome unknown, may already be on the wire) from the four
+		// above it (nothing was sent).
+		return resp, st, fmt.Errorf("%w: %v", ErrSendAmbiguous, err)
+	}
+	return resp, st, nil
 }
 
 // readActive reads a session's active entry. A session with no active entry
@@ -514,7 +646,8 @@ func answered(e *caido.ReplayEntry, st SendState, activeID string) bool {
 		return false
 	}
 	if activeID != st.EntryID {
-		return true
+		// See SendState.preEntries: moved is not enough, it has to be new.
+		return !st.preEntries[activeID]
 	}
 	if st.strict {
 		return false
@@ -534,10 +667,20 @@ func PollForEntry(
 	if st.SessionID == "" {
 		return nil, errors.New("poll: no session to poll")
 	}
+	_, hasDeadline := ctx.Deadline()
 	interval := pollInitInterval
 	transient := 0
 	var lastErr error
-	for range PollMaxRetries {
+	for attempt := 0; ; attempt++ {
+		// PollMaxRetries is a FALLBACK cap, not a schedule. Its backoff sums to
+		// 8.75 s, so while it was the only bound, every deadline longer than
+		// that was dead text: batch_send declared a 15 s window per request and
+		// got 8.75 s, and a target answering in 10 s was reported as a timeout
+		// AND cost the batch a pool slot. With a deadline the deadline decides;
+		// the count still bounds a caller who brought neither.
+		if !hasDeadline && attempt >= PollMaxRetries {
+			break
+		}
 		e, activeID, err := readActive(ctx, client, st.SessionID)
 		if err != nil {
 			transient++
@@ -555,7 +698,7 @@ func PollForEntry(
 		}
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, pollEndedErr(ctx, lastErr)
 		case <-time.After(interval):
 		}
 		interval = min(interval*2, pollMaxInterval)
@@ -566,4 +709,19 @@ func PollForEntry(
 		)
 	}
 	return nil, errors.New("timed out waiting for response")
+}
+
+// pollEndedErr names why a poll stopped. A deadline that ran out is a timeout
+// and says so; a caller that cancelled gets context.Canceled, because the two
+// mean different things to everything upstream.
+func pollEndedErr(ctx context.Context, lastErr error) error {
+	if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return ctx.Err()
+	}
+	if lastErr != nil {
+		return fmt.Errorf(
+			"timed out waiting for response (last read failed: %v)", lastErr,
+		)
+	}
+	return errors.New("timed out waiting for response")
 }

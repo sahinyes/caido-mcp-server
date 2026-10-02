@@ -38,17 +38,45 @@ func TestResetDefaultSession_UpdatesCache(t *testing.T) {
 	}
 }
 
-func TestGetOrCreateSession_ReturnsCachedSession(t *testing.T) {
-	ResetDefaultSession("abc")
-	t.Cleanup(func() { ResetDefaultSession("") })
-
+func TestGetOrCreateSession_ReusesTheCacheWithinOneProject(t *testing.T) {
+	// The cache is keyed on the OPEN PROJECT as well as on nothing else being
+	// passed in, so proving reuse needs a client that can answer
+	// currentProject. The project half is covered by
+	// TestSend_AbandonsSharedSessionAfterProjectSwitch.
+	_, client := newFakeCaido(t)
 	ctx := context.Background()
-	id, err := GetOrCreateSession(ctx, nil, "")
+
+	first, err := GetOrCreateSession(ctx, client, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if id != "abc" {
-		t.Fatalf("expected %q, got %q", "abc", id)
+	second, err := GetOrCreateSession(ctx, client, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if first != second {
+		t.Fatalf("the shared session was not reused: %q then %q", first, second)
+	}
+}
+
+func TestGetOrCreateSession_UnreadableProjectDoesNotReuse(t *testing.T) {
+	// Fail closed: a project that cannot be read might not be the project the
+	// cached id was numbered in, and drafting into the wrong project overwrites
+	// somebody's live request. One unused session is the cheaper mistake.
+	f, client := newFakeCaido(t)
+	ctx := context.Background()
+
+	first, err := GetOrCreateSession(ctx, client, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	f.setProject("")
+	second, err := GetOrCreateSession(ctx, client, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if second == first {
+		t.Fatal("the cache was reused while the open project was unknown")
 	}
 }
 
@@ -482,16 +510,36 @@ func taskResp(
 	resp := &gen.StartReplayTaskResponse{}
 	if e != nil {
 		resp.StartReplayTask.Error = &e
+		return resp
 	}
+	// No error means a task, or the payload is reporting nothing at all - see
+	// TestTaskPayloadError_NoTaskAndNoErrorIsAnError.
+	resp.StartReplayTask.Task =
+		&gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadTaskReplayTask{
+			Id: "t1",
+		}
 	return resp
 }
 
-func TestTaskPayloadError_NilAndEmptyAreNotErrors(t *testing.T) {
+func TestTaskPayloadError_NilAndStartedTaskAreNotErrors(t *testing.T) {
 	if err := taskPayloadError(nil); err != nil {
 		t.Fatalf("nil response: %v", err)
 	}
 	if err := taskPayloadError(taskResp(nil)); err != nil {
-		t.Fatalf("no payload error: %v", err)
+		t.Fatalf("a started task: %v", err)
+	}
+}
+
+func TestTaskPayloadError_NoTaskAndNoErrorIsAnError(t *testing.T) {
+	// Both halves of the payload are nullable. A payload with neither means the
+	// task did not start, and reading it as success buys a full poll window of
+	// waiting on a session where nothing is running.
+	err := taskPayloadError(&gen.StartReplayTaskResponse{})
+	if err == nil {
+		t.Fatal("a payload with no task and no error must not read as started")
+	}
+	if !errors.Is(err, ErrStartTaskRefused) {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

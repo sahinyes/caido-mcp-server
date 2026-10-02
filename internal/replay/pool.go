@@ -2,6 +2,7 @@ package replay
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -9,10 +10,29 @@ import (
 	caido "github.com/caido-community/sdk-go"
 )
 
-// retireTimeout bounds creating a replacement for a retired session. It runs
-// on a detached context because the request that retired the session has
-// usually just lost its own deadline.
-const retireTimeout = 10 * time.Second
+const (
+	// retireTimeout bounds creating a replacement for a retired session. It runs
+	// on a detached context because the request that retired the session has
+	// usually just lost its own deadline.
+	retireTimeout = 10 * time.Second
+
+	// cleanupTimeout bounds deleting a batch's sessions.
+	//
+	// Cleanup runs on a context detached from the caller's - the batch is over
+	// and its deadline usually with it - and the SDK's http.Client has no
+	// Timeout of its own, so without this the final round trip of every batch
+	// was bounded by nothing at all: a Caido that accepts the connection and
+	// never answers would hold RunBatch open forever, after every result was
+	// already in hand.
+	cleanupTimeout = 15 * time.Second
+)
+
+// ErrPoolDrained is returned by Acquire when every session has been retired and
+// none could be replaced.
+var ErrPoolDrained = errors.New(
+	"replay session pool is empty: every session was retired and no " +
+		"replacement could be created",
+)
 
 // SessionPool manages a pool of replay sessions for parallel sends.
 // Each session can only handle one request at a time, so we need N
@@ -22,6 +42,15 @@ type SessionPool struct {
 	sessions chan string
 	mu       sync.Mutex
 	created  []string
+	// live counts the sessions still circulating or checked out. It can only
+	// fall, and only when a retired session could not be replaced.
+	live int
+	// drained is closed when live reaches zero, which is the only thing that
+	// can wake a waiter that will never get a session. Without it, Acquire
+	// waited on the context alone - and an MCP tool call frequently has no
+	// deadline, so a pool that collapsed left RunBatch's wg.Wait() blocked
+	// forever and threw away every result that was already in hand.
+	drained chan struct{}
 }
 
 // NewSessionPool creates a pool pre-filled with n replay sessions.
@@ -39,6 +68,7 @@ func NewSessionPool(
 		client:   client,
 		sessions: make(chan string, n),
 		created:  make([]string, 0, n),
+		drained:  make(chan struct{}),
 	}
 
 	// Create sessions in parallel, bounded by 5 concurrent creates.
@@ -82,6 +112,7 @@ func NewSessionPool(
 		}
 		pool.sessions <- r.id
 		pool.created = append(pool.created, r.id)
+		pool.live++
 	}
 	if firstErr != nil {
 		pool.Cleanup(context.WithoutCancel(ctx))
@@ -91,11 +122,20 @@ func NewSessionPool(
 	return pool, nil
 }
 
-// Acquire blocks until a session is available.
+// Acquire blocks until a session is available, the pool drains, or ctx ends.
 func (p *SessionPool) Acquire(ctx context.Context) (string, error) {
+	// Checked first and without blocking, so a drained pool that still has a
+	// session in flight cannot lose the race to its own closed channel.
 	select {
 	case id := <-p.sessions:
 		return id, nil
+	default:
+	}
+	select {
+	case id := <-p.sessions:
+		return id, nil
+	case <-p.drained:
+		return "", ErrPoolDrained
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
@@ -124,6 +164,19 @@ func (p *SessionPool) Retire(ctx context.Context, id string) {
 
 	newID, _, err := NewSession(ctx, p.client)
 	if err != nil {
+		// The pool is now one narrower, permanently. Say so, so that a waiter
+		// which can never be served is woken with an error instead of waiting
+		// out a deadline it may not have.
+		p.mu.Lock()
+		p.live--
+		if p.live <= 0 {
+			select {
+			case <-p.drained:
+			default:
+				close(p.drained)
+			}
+		}
+		p.mu.Unlock()
 		return
 	}
 	p.mu.Lock()
@@ -149,5 +202,7 @@ func (p *SessionPool) Cleanup(ctx context.Context) {
 	if len(ids) == 0 {
 		return
 	}
+	ctx, cancel := context.WithTimeout(ctx, cleanupTimeout)
+	defer cancel()
 	_, _ = p.client.Replay.DeleteSessions(ctx, ids)
 }

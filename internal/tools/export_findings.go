@@ -182,6 +182,11 @@ const (
 	// exportMaxPages bounds the walk. It is a stop, not a silent cap: hitting
 	// it is reported in the output.
 	exportMaxPages = 50
+	// exportMaxFindings bounds how many findings are returned INLINE. The
+	// pre-pagination code could only ever return 100; following pages without a
+	// ceiling turned a reporter-wide export into up to 5,000 findings in one MCP
+	// response. Reaching it is reported, like every other shortfall here.
+	exportMaxFindings = 500
 )
 
 // exportFindingsFormatted collects findings for the inline formats.
@@ -203,12 +208,24 @@ func exportFindingsFormatted(
 	for _, id := range ids {
 		idSet[id] = true
 	}
+	// ids win over reporter, exactly as they do on the native export path
+	// (exportFindingsRaw builds an ids input and ignores reporter entirely).
+	// AND-ing them here made the same tool answer two different questions, and
+	// then report findings that exist as "not found".
+	if len(idSet) > 0 {
+		reporter = ""
+	}
 
 	limit := exportPageSize
 	var cursor *string
-	var findings []exportedFinding
+	// Not a nil slice: json.MarshalIndent encodes nil as `null`, so an export
+	// that matched nothing came back as the four characters "null" instead of an
+	// empty list.
+	findings := []exportedFinding{}
 	found := make(map[string]bool, len(idSet))
 	truncated := false
+	capped := false
+	stalled := false
 
 	for page := 0; ; page++ {
 		if page >= exportMaxPages {
@@ -249,8 +266,24 @@ func exportFindingsFormatted(
 		if len(idSet) > 0 && len(found) == len(idSet) {
 			break
 		}
+		// Asked BEFORE the volume cap, so a result set that ends at exactly
+		// exportMaxFindings is reported as complete rather than as capped with
+		// "more exist" - a claim the server just contradicted.
 		if !resp.Findings.PageInfo.HasNextPage ||
 			resp.Findings.PageInfo.EndCursor == nil {
+			break
+		}
+		if len(findings) >= exportMaxFindings {
+			capped = true
+			break
+		}
+		// A server that answers hasNextPage=true with the SAME cursor would
+		// otherwise be followed exportMaxPages times, appending the same page
+		// over and over. Standing still is the end of the walk - and it gets its
+		// own warning, because "the page limit stopped me" and "the server
+		// stopped advancing" send you to different places.
+		if cursor != nil && *cursor == *resp.Findings.PageInfo.EndCursor {
+			stalled = true
 			break
 		}
 		cursor = resp.Findings.PageInfo.EndCursor
@@ -258,21 +291,46 @@ func exportFindingsFormatted(
 
 	var warnings []string
 	if len(idSet) > 0 && len(found) < len(idSet) {
+		// Deduplicated against idSet, not counted off the raw ids slice: a
+		// repeated id would otherwise make the numerator exceed the total.
 		missing := make([]string, 0, len(idSet)-len(found))
+		seen := make(map[string]bool, len(idSet))
 		for _, id := range ids {
-			if !found[id] {
-				missing = append(missing, id)
+			if found[id] || seen[id] {
+				continue
 			}
+			seen[id] = true
+			missing = append(missing, id)
+		}
+		// "Not found" is a claim about what exists. It can only be made about
+		// pages that were actually read, so a walk that stopped early says that
+		// instead.
+		what := "were not found"
+		if truncated || capped || stalled {
+			what = "were not found in the pages that were read"
 		}
 		warnings = append(warnings, fmt.Sprintf(
-			"%d of %d requested findings were not found: %s",
-			len(missing), len(idSet), strings.Join(missing, ", "),
+			"%d of %d requested findings %s: %s",
+			len(missing), len(idSet), what, strings.Join(missing, ", "),
 		))
 	}
 	if truncated {
 		warnings = append(warnings, fmt.Sprintf(
-			"stopped after %d pages of %d; more findings exist",
+			"stopped after at most %d pages of %d; more findings exist",
 			exportMaxPages, exportPageSize,
+		))
+	}
+	if capped {
+		warnings = append(warnings, fmt.Sprintf(
+			"stopped at %d findings; more exist (narrow with ids or reporter)",
+			exportMaxFindings,
+		))
+	}
+	if stalled {
+		warnings = append(warnings, fmt.Sprintf(
+			"caido reported more findings but returned the same cursor twice; "+
+				"stopped after %d findings",
+			len(findings),
 		))
 	}
 	warning := strings.Join(warnings, "; ")

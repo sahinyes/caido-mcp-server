@@ -33,6 +33,16 @@ func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
+	// Drop stale idle connections. This happens BEFORE the mutation check on
+	// purpose: the pooled connection that just failed is dead whether or not
+	// this particular request is allowed a second attempt, and leaving it in
+	// the pool hands it to the NEXT request - which, after a sleep/wake, is
+	// usually a read that could have healed itself. Purging is pool hygiene,
+	// not part of the retry.
+	if closer, ok := t.base.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
+
 	// A GraphQL MUTATION is not retried once the bytes may already have left:
 	// "connection reset while reading the response" and "request delivered,
 	// then executed, then the reply lost" are the same error here. Replaying it
@@ -47,11 +57,6 @@ func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// reaches this transport otherwise is the ambiguous half.)
 	if mayHaveReachedServer && isGraphQLMutation(req) {
 		return resp, err
-	}
-
-	// Drop stale idle connections so the retry uses a fresh TCP dial.
-	if closer, ok := t.base.(interface{ CloseIdleConnections() }); ok {
-		closer.CloseIdleConnections()
 	}
 
 	// Body replay safety: if body was consumed and is not replayable, bubble

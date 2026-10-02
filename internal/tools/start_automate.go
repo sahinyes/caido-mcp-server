@@ -98,9 +98,11 @@ func startAutomateHandler(
 		// A payload with no automateTask means the task did not start. The
 		// old code reported success with an empty taskId, and the follow-up
 		// the description recommends (get_automate_session) then looks like a
-		// session that has simply not produced entries yet. The SDK's
-		// operation does not select the payload's error, so the reason is not
-		// available here - but the absence of the task is unambiguous.
+		// session that has simply not produced entries yet. No reason is
+		// available, and not because the operation fails to select it:
+		// StartAutomateTaskPayload has no error field in the schema at all,
+		// unlike StartReplayTaskPayload. The absence of the task is the whole
+		// of what the server says.
 		if taskResp.StartAutomateTask.AutomateTask == nil {
 			return nil, StartAutomateOutput{}, fmt.Errorf(
 				"session created (%s) but startAutomateTask returned no task",

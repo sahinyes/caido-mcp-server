@@ -89,6 +89,24 @@ func timeRequestHandler(
 		payloads := input.Payloads
 		if len(payloads) == 0 {
 			payloads = []string{""}
+		} else {
+			// An A/B run with nothing to vary is not an A/B run. Both of these
+			// used to be accepted silently: every arm sent the identical
+			// request and per_payload then reported the arms as if they had
+			// been compared, which is a fabricated comparison rather than a
+			// missing one.
+			if input.PayloadField == "" {
+				return nil, TimingRequestOutput{}, fmt.Errorf(
+					"payloads need payloadField: the placeholder in raw to "+
+						"substitute each payload into",
+				)
+			}
+			if !strings.Contains(input.Raw, input.PayloadField) {
+				return nil, TimingRequestOutput{}, fmt.Errorf(
+					"payloadField %q does not occur in raw",
+					input.PayloadField,
+				)
+			}
 		}
 
 		allSamples := make([]TimingSample, 0, samples*len(payloads))
@@ -99,8 +117,13 @@ func timeRequestHandler(
 		for _, payload := range payloads {
 			for i := 0; i < samples; i++ {
 				rawBody := input.Raw
-				if payload != "" && input.PayloadField != "" {
-					rawBody = strings.ReplaceAll(rawBody, input.PayloadField, payload)
+				if input.PayloadField != "" {
+					// Substituted even when the payload is EMPTY: "" is the
+					// natural baseline arm of an A/B run, and skipping it sent
+					// the placeholder token itself as the value.
+					rawBody = strings.ReplaceAll(
+						rawBody, input.PayloadField, payload,
+					)
 				}
 
 				sendInput := SendRequestInput{
@@ -216,7 +239,9 @@ func RegisterTimeRequestTool(
 		Name: "caido_time_request",
 		Description: `Send a request N times and measure response timing. ` +
 			`roundtrip_ns and every summary/per_payload number is CAIDO's own roundtrip ` +
-			`(ms resolution, no MCP or SDK overhead). client_total_ns is this tool's ` +
+			`(ms resolution - a 0 means the target answered in under a ` +
+			`millisecond, not that the measurement failed; no MCP or SDK ` +
+			`overhead). client_total_ns is this tool's ` +
 			`wall clock and is quantised by the response poll schedule (50-500ms), ` +
 			`so do not compare payloads with it. ` +
 			`Use payloads+payloadField for A/B timing (sleep oracle detection). ` +

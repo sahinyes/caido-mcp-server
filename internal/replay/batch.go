@@ -32,8 +32,9 @@ type BatchResult struct {
 	Error       string                  `json:"error,omitempty"`
 }
 
-// batchPollTimeout is how long one batched request waits for its answer.
-const batchPollTimeout = 15 * time.Second
+// batchPollTimeout is how long one batched request waits for its answer. It is
+// a var so the tests that have to exhaust it do not take a minute to run.
+var batchPollTimeout = 15 * time.Second
 
 // RunBatch sends N requests in parallel through Caido's Replay API.
 // It creates a session pool, dispatches each request to its own
